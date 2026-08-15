@@ -25,15 +25,17 @@ jobs:
       - name: Patch framework references
         shell: pwsh
         run: |
-          $root = (Get-Location).Path
           $src = @(
             'using System;',
             'using System.IO;',
             'using dnlib.DotNet;',
             'class PatchStore {',
             '  static void Main() {',
-            '    string input = Path.Combine(Environment.CurrentDirectory, "Store.exe");',
-            '    string output = Path.Combine(Environment.CurrentDirectory, "build\\Store_FIXED.exe");',
+            '    string root = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "..\\.."));',
+            '    string input = Path.Combine(root, "Store.exe");',
+            '    string output = Path.Combine(root, "build\\Store_FIXED.exe");',
+            '    string countFile = Path.Combine(root, "build\\patch-count.txt");',
+            '    if (!File.Exists(input)) throw new FileNotFoundException("Store.exe not found", input);',
             '    var module = ModuleDefMD.Load(input);',
             '    int changed = 0;',
             '    foreach (var ar in module.GetAssemblyRefs()) {',
@@ -51,7 +53,8 @@ jobs:
             '      if (target != null) { ar.Version = target; changed++; }',
             '    }',
             '    module.Write(output);',
-            '    File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "build\\patch-count.txt"), changed.ToString());',
+            '    File.WriteAllText(countFile, changed.ToString());',
+            '    Console.WriteLine("Patched references: " + changed);',
             '  }',
             '}'
           )
@@ -66,7 +69,6 @@ jobs:
           if ($exit -ne 0) { throw 'Patcher execution failed' }
           $changed = Get-Content build\patch-count.txt
           if ([int]$changed -lt 1) { throw 'No framework references were changed' }
-          Write-Host "Patched references: $changed"
 
       - name: Verify assembly references
         shell: pwsh
@@ -90,6 +92,7 @@ jobs:
           & build\Verify.exe | Tee-Object build\verification.txt
           $bad = Select-String -Path build\verification.txt -Pattern 'Version=4.0.0.0'
           if ($bad) { throw 'A .NET 4.0 framework reference remains' }
+          if (-not (Select-String -Path build\verification.txt -Pattern 'System.Windows.Forms, Version=2.0.0.0')) { throw 'System.Windows.Forms 2.0.0.0 reference missing' }
 
       - name: Package
         shell: pwsh
