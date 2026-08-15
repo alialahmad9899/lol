@@ -19,12 +19,12 @@ jobs:
           Expand-Archive dnlib.nupkg -DestinationPath dnlib_pkg -Force
           $dll = Get-ChildItem dnlib_pkg -Recurse -Filter dnlib.dll | Select-Object -First 1
           if ($null -eq $dll) { throw 'dnlib.dll not found' }
-          Copy-Item $dll.FullName .\dnlib.dll
+          New-Item -ItemType Directory -Force build\patch | Out-Null
+          Copy-Item $dll.FullName build\patch\dnlib.dll -Force
 
       - name: Patch framework references
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force build\patch | Out-Null
           $src = @(
             'using System;',
             'using System.IO;',
@@ -56,10 +56,13 @@ jobs:
           )
           $src -join [Environment]::NewLine | Set-Content build\patch\PatchStore.cs -Encoding UTF8
           $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
-          & $csc /nologo /target:exe /out:build\patch\PatchStore.exe /reference:dnlib.dll build\patch\PatchStore.cs
+          & $csc /nologo /target:exe /out:build\patch\PatchStore.exe /reference:build\patch\dnlib.dll build\patch\PatchStore.cs
           if ($LASTEXITCODE -ne 0) { throw 'Patcher compilation failed' }
-          & build\patch\PatchStore.exe
-          if ($LASTEXITCODE -ne 0) { throw 'Patcher execution failed' }
+          Push-Location build\patch
+          & .\PatchStore.exe
+          $exit = $LASTEXITCODE
+          Pop-Location
+          if ($exit -ne 0) { throw 'Patcher execution failed' }
           $changed = Get-Content build\patch-count.txt
           if ([int]$changed -lt 1) { throw 'No framework references were changed' }
           Write-Host "Patched references: $changed"
@@ -86,8 +89,6 @@ jobs:
           & build\Verify.exe | Tee-Object build\verification.txt
           $bad = Select-String -Path build\verification.txt -Pattern 'Version=4.0.0.0'
           if ($bad) { throw 'A .NET 4.0 framework reference remains' }
-          $rt = Get-Content build\verification.txt | Select-String '^Runtime='
-          if ($rt -notmatch 'v2.0.50727') { Write-Warning 'Runtime header differs from original; references are still checked.' }
 
       - name: Package
         shell: pwsh
