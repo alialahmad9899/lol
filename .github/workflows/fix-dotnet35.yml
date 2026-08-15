@@ -25,14 +25,15 @@ jobs:
       - name: Patch framework references
         shell: pwsh
         run: |
+          $root = (Get-Location).Path
           $src = @(
             'using System;',
             'using System.IO;',
             'using dnlib.DotNet;',
             'class PatchStore {',
             '  static void Main() {',
-            '    string input = Path.GetFullPath("Store.exe");',
-            '    string output = Path.GetFullPath("build\\Store_FIXED.exe");',
+            '    string input = Path.Combine(Environment.CurrentDirectory, "Store.exe");',
+            '    string output = Path.Combine(Environment.CurrentDirectory, "build\\Store_FIXED.exe");',
             '    var module = ModuleDefMD.Load(input);',
             '    int changed = 0;',
             '    foreach (var ar in module.GetAssemblyRefs()) {',
@@ -50,7 +51,7 @@ jobs:
             '      if (target != null) { ar.Version = target; changed++; }',
             '    }',
             '    module.Write(output);',
-            '    File.WriteAllText("build\\patch-count.txt", changed.ToString());',
+            '    File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "build\\patch-count.txt"), changed.ToString());',
             '  }',
             '}'
           )
