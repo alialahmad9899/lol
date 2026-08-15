@@ -31,7 +31,7 @@ jobs:
           if ($null -eq $dll) { throw 'dnlib.dll not found' }
           Copy-Item $dll.FullName build\dnlib.dll -Force
 
-      - name: Patch only GenerateInvoiceHtml
+      - name: Patch ONLY GenerateInvoiceHtml
         shell: pwsh
         run: |
           $src = @(
@@ -44,7 +44,7 @@ jobs:
             'using InvoiceTemplate;',
             'class Patch {',
             '  static void Main() {',
-            '    string root = Environment.CurrentDirectory;',
+            '    string root = Directory.GetParent(Environment.CurrentDirectory).FullName;',
             '    string input = Path.Combine(root, "Store.exe");',
             '    string output = Path.Combine(root, "build\\Store_THERMAL.exe");',
             '    StringBuilder log = new StringBuilder();',
@@ -57,7 +57,7 @@ jobs:
             '      MethodDef target = null;',
             '      foreach (MethodDef m in form.Methods) if (m.Name == "GenerateInvoiceHtml") { target = m; break; }',
             '      log.AppendLine("GenerateInvoiceHtml=" + (target != null));',
-            '      if (target == null) throw new Exception("GenerateInvoiceHtml not found");',
+            '      if (target == null) throw new Exception("GenerateInvoiceHtml not found in Store.exe");',
             '      MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Render", BindingFlags.Public | BindingFlags.Static);',
             '      log.AppendLine("Render=" + (mi != null));',
             '      if (mi == null) throw new Exception("InvoiceRenderer.Render not found");',
@@ -65,7 +65,6 @@ jobs:
             '      log.AppendLine("RenderParams=" + mi.GetParameters().Length);',
             '      if (target.Parameters.Count != mi.GetParameters().Length) throw new Exception("Parameter count mismatch");',
             '      var imported = module.Import(mi);',
-            '      log.AppendLine("Imported=" + imported.FullName);',
             '      CilBody body = new CilBody();',
             '      for (int i = 0; i < target.Parameters.Count; i++) body.Instructions.Add(Instruction.Create(OpCodes.Ldarg, target.Parameters[i]));',
             '      body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));',
@@ -94,7 +93,7 @@ jobs:
           if ($exit -ne 0) { throw 'Patcher execution failed' }
           Copy-Item build\InvoiceTemplate.dll build\InvoiceTemplate.Runtime.dll -Force
 
-      - name: Verify target method and framework references
+      - name: Verify ONLY print-template change and framework compatibility
         if: success()
         shell: pwsh
         run: |
