@@ -1,0 +1,1 @@
+The repository currently contains the modified source and binaries supplied by the user. This branch is for a legacy .NET 3.5 compatible reconstruction. Final binary delivery requires source/assembly inspection and verification.
