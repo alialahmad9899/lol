@@ -1,8 +1,10 @@
 using System;
 using System.Data;
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Web;
+using System.Windows.Forms;
 
 namespace InvoiceTemplate
 {
@@ -87,6 +89,101 @@ namespace InvoiceTemplate
             h.Append("<div class='footer'><div class='thanks'>سررنا بزيارتكم، طاب يومكم 🌷</div><div class='muted'>نشكركم لثقتكم بنا</div></div>");
             h.Append("</body></html>");
             return h.ToString();
+        }
+
+        // Adapter used by the original Store.exe: it reads only the already-populated
+        // Frm_Bill controls/fields, so accounting and invoice-entry logic are untouched.
+        public static void Print(object frmBill)
+        {
+            if (frmBill == null) throw new ArgumentNullException("frmBill");
+            Type t = frmBill.GetType();
+            DataTable details = GetField<DataTable>(frmBill, "row_details_bill");
+            DataRow settings = GetField<DataRow>(frmBill, "r_setting");
+            string type = GetControlText(frmBill, "cb_Type_Bill");
+            string number = GetControlText(frmBill, "txt_ID_Pay");
+            string customer = GetControlText(frmBill, "cb_contacts");
+            string currency = GetControlText(frmBill, "cb_Type_Money");
+            DateTime date = GetControlDate(frmBill, "Date_Bill", DateTime.Now);
+            double total = GetControlDouble(frmBill, "txt_Sum");
+            double paid = GetControlDouble(frmBill, "txt_Sum5");
+            double discount = GetFieldDouble(frmBill, "Sum_Discount");
+            string words = GetControlText(frmBill, "label12");
+            string status = GetControlText(frmBill, "label15");
+            string notes = GetControlText(frmBill, "txt_note");
+
+            string html = Render(details, settings, null, null, null, "", customer, type, number, date,
+                total, paid, 0d, discount, words, status, notes, currency);
+
+            Form host = new Form();
+            host.Text = type + " - " + number;
+            host.StartPosition = FormStartPosition.CenterScreen;
+            host.ShowInTaskbar = false;
+            host.FormBorderStyle = FormBorderStyle.None;
+            host.Opacity = 0.01;
+            host.Width = 900;
+            host.Height = 700;
+            WebBrowser browser = new WebBrowser();
+            browser.Dock = DockStyle.Fill;
+            browser.ScriptErrorsSuppressed = true;
+            host.Controls.Add(browser);
+            bool printed = false;
+            browser.DocumentCompleted += delegate(object sender, WebBrowserDocumentCompletedEventArgs e)
+            {
+                if (printed || browser.Document == null) return;
+                if (e.Url != null && browser.Url != null && e.Url != browser.Url) return;
+                printed = true;
+                browser.Print();
+                host.BeginInvoke(new MethodInvoker(delegate { host.Close(); }));
+            };
+            host.FormClosed += delegate { browser.Dispose(); host.Dispose(); };
+            host.Show();
+            browser.DocumentText = html;
+        }
+
+        private static T GetField<T>(object o, string name) where T : class
+        {
+            FieldInfo f = o.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            return f == null ? null : f.GetValue(o) as T;
+        }
+
+        private static double GetFieldDouble(object o, string name)
+        {
+            FieldInfo f = o.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (f == null) return 0d;
+            object v = f.GetValue(o);
+            if (v == null) return 0d;
+            double x;
+            if (Double.TryParse(Convert.ToString(v, CultureInfo.CurrentCulture), NumberStyles.Any, CultureInfo.CurrentCulture, out x)) return x;
+            return 0d;
+        }
+
+        private static Control GetControl(object o, string name)
+        {
+            FieldInfo f = o.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            return f == null ? null : f.GetValue(o) as Control;
+        }
+
+        private static string GetControlText(object o, string name)
+        {
+            Control c = GetControl(o, name);
+            return c == null ? "" : Convert.ToString(c.Text, CultureInfo.CurrentCulture);
+        }
+
+        private static double GetControlDouble(object o, string name)
+        {
+            double x;
+            string s = GetControlText(o, name);
+            if (Double.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out x)) return x;
+            if (Double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out x)) return x;
+            return 0d;
+        }
+
+        private static DateTime GetControlDate(object o, string name, DateTime fallback)
+        {
+            FieldInfo f = o.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            object v = f == null ? null : f.GetValue(o);
+            DateTimePicker picker = v as DateTimePicker;
+            return picker == null ? fallback : picker.Value;
         }
 
         private static void Meta(StringBuilder h, string label, string value)
