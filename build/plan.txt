@@ -1,0 +1,1 @@
+Next: inspect full Frm_Bill source, remove C#4-only constructs from modified HTML printing path, and build against legacy .NET 3.5 references. Do not alter accounting logic.
