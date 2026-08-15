@@ -125,16 +125,18 @@ jobs:
         run: |
           Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.Runtime.dll,build\verification.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
 
-      - name: Save diagnostic to branch on failure
+      - name: Publish diagnostic file to branch
         if: failure()
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if (Test-Path build\patch-diagnostic.txt) {
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add build\patch-diagnostic.txt
-            git commit -m "chore: capture thermal patch diagnostic [skip ci]" || exit 0
-            git push
+            $name = "build/patch-diagnostic-$env:GITHUB_RUN_ID.txt"
+            $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes('build/patch-diagnostic.txt'))
+            $payload = @{ message = "chore: publish thermal patch diagnostic [skip ci]"; content = $b64; branch = $env:GITHUB_REF_NAME } | ConvertTo-Json
+            $payload | gh api "repos/$env:GITHUB_REPOSITORY/contents/$name" --method PUT --input - | Out-Null
+            Write-Host "Published diagnostic to $name"
           }
 
       - name: Upload diagnostic
@@ -142,7 +144,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: thermal-build-diagnostic
-          path: build\patch-diagnostic.txt
+          path: build/patch-diagnostic.txt
           if-no-files-found: warn
 
       - name: Upload package
@@ -150,4 +152,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Store-THERMAL-INVOICE
-          path: build\Store-THERMAL-INVOICE.zip
+          path: build/Store-THERMAL-INVOICE.zip
