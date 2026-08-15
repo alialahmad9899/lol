@@ -1,0 +1,5 @@
+Frm_Bill=True
+GenerateInvoiceHtml=False
+PATCHED=FALSE
+System.Exception: GenerateInvoiceHtml not found in Store.exe
+   at Patch.Main()
