@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using dnlib.DotNet;
+using dnlib.DotNet.Emit;
 
 class VerifyThermalInvoice
 {
@@ -31,7 +32,7 @@ class VerifyThermalInvoice
             string s = ins.ToString();
             if (s.IndexOf("InvoiceRenderer::IsSalesPurchase", StringComparison.OrdinalIgnoreCase) >= 0) hasCheck = true;
             if (s.IndexOf("InvoiceRenderer::Print", StringComparison.OrdinalIgnoreCase) >= 0) hasPrint = true;
-            if (ins.OpCode.Code == dnlib.DotNet.Emit.Code.Brfalse || ins.OpCode.Code == dnlib.DotNet.Emit.Code.Brfalse_S) hasBranch = true;
+            if (ins.OpCode.Code == Code.Brfalse || ins.OpCode.Code == Code.Brfalse_S) hasBranch = true;
         }
         if (!hasCheck) throw new Exception("Sales/purchase gate call missing");
         if (!hasPrint) throw new Exception("New renderer call missing");
