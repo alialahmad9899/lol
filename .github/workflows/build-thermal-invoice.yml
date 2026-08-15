@@ -1,0 +1,111 @@
+name: Build thermal invoice template
+on:
+  push:
+    branches:
+      - fix/thermal-invoice-template-v2
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build InvoiceTemplate.dll with .NET 3.5
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          $csc35 = "$env:WINDIR\Microsoft.NET\Framework\v3.5\csc.exe"
+          & $csc35 /nologo /target:library /out:build\InvoiceTemplate.dll /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Data.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Web.dll" InvoiceTemplate\InvoiceRenderer.cs
+          if ($LASTEXITCODE -ne 0) { throw 'InvoiceTemplate.dll build failed' }
+
+      - name: Download dnlib
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/dnlib/4.5.0' -OutFile dnlib.nupkg
+          Expand-Archive dnlib.nupkg -DestinationPath dnlib_pkg -Force
+          $dll = Get-ChildItem dnlib_pkg -Recurse -Filter dnlib.dll | Select-Object -First 1
+          if ($null -eq $dll) { throw 'dnlib.dll not found' }
+          Copy-Item $dll.FullName build\dnlib.dll -Force
+
+      - name: Patch only GenerateInvoiceHtml
+        shell: pwsh
+        run: |
+          $src = @(
+            'using System;',
+            'using System.IO;',
+            'using System.Reflection;',
+            'using dnlib.DotNet;',
+            'using dnlib.DotNet.Emit;',
+            'using InvoiceTemplate;',
+            'class Patch {',
+            '  static void Main() {',
+            '    string root = Environment.CurrentDirectory;',
+            '    string input = Path.Combine(root, "Store.exe");',
+            '    string output = Path.Combine(root, "build\\Store_THERMAL.exe");',
+            '    var module = ModuleDefMD.Load(input);',
+            '    TypeDef form = null;',
+            '    foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form = t; break; }',
+            '    if (form == null) throw new Exception("Store.Frm_Bill not found");',
+            '    MethodDef target = null;',
+            '    foreach (MethodDef m in form.Methods) if (m.Name == "GenerateInvoiceHtml") { target = m; break; }',
+            '    if (target == null) throw new Exception("GenerateInvoiceHtml not found");',
+            '    MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Render", BindingFlags.Public | BindingFlags.Static);',
+            '    if (mi == null) throw new Exception("InvoiceRenderer.Render not found");',
+            '    var imported = module.Import(mi);',
+            '    CilBody body = new CilBody();',
+            '    for (int i = 1; i <= 18; i++) body.Instructions.Add(Instruction.Create(OpCodes.Ldarg, target.Parameters[i - 1]));',
+            '    body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));',
+            '    body.Instructions.Add(Instruction.Create(OpCodes.Ret));',
+            '    target.Body = body;',
+            '    module.Write(output);',
+            '    Console.WriteLine("Patched GenerateInvoiceHtml only");',
+            '  }',
+            '}'
+          )
+          $src -join [Environment]::NewLine | Set-Content build\Patch.cs -Encoding UTF8
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Patch.exe /reference:build\dnlib.dll /reference:build\InvoiceTemplate.dll build\Patch.cs
+          if ($LASTEXITCODE -ne 0) { throw 'Patcher build failed' }
+          Push-Location build
+          & .\Patch.exe
+          $exit = $LASTEXITCODE
+          Pop-Location
+          if ($exit -ne 0) { throw 'Patcher execution failed' }
+          Copy-Item build\InvoiceTemplate.dll build\Store_THERMAL.dll -Force
+
+      - name: Verify target method and framework references
+        shell: pwsh
+        run: |
+          $src = @(
+            'using System;',
+            'using System.Reflection;',
+            'class Verify {',
+            '  static void Main() {',
+            '    Assembly a = Assembly.ReflectionOnlyLoadFrom("build\\Store_THERMAL.exe");',
+            '    Console.WriteLine("Runtime=" + a.ImageRuntimeVersion);',
+            '    Type t = a.GetType("Store.Frm_Bill", false);',
+            '    Console.WriteLine("Frm_Bill=" + (t != null));',
+            '    foreach (AssemblyName r in a.GetReferencedAssemblies()) if (r.Name == "System.Windows.Forms" || r.Name == "System" || r.Name == "System.Data" || r.Name == "System.Drawing" || r.Name == "System.Core" || r.Name == "mscorlib") Console.WriteLine(r.FullName);',
+            '    foreach (AssemblyName r in a.GetReferencedAssemblies()) if (r.Name == "InvoiceTemplate") Console.WriteLine(r.FullName);',
+            '  }',
+            '}'
+          )
+          $src -join [Environment]::NewLine | Set-Content build\Verify.cs -Encoding UTF8
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Verify.exe build\Verify.cs
+          if ($LASTEXITCODE -ne 0) { throw 'Verifier build failed' }
+          & build\Verify.exe | Tee-Object build\verification.txt
+          if (Select-String -Path build\verification.txt -Pattern 'Version=4.0.0.0') { throw 'Unexpected .NET 4.0 framework reference detected' }
+          if (!(Select-String -Path build\verification.txt -Pattern 'InvoiceTemplate')) { throw 'InvoiceTemplate reference missing' }
+          if (!(Select-String -Path build\verification.txt -Pattern 'Frm_Bill=True')) { throw 'Frm_Bill missing after patch' }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.dll,build\verification.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Store-THERMAL-INVOICE
+          path: build\Store-THERMAL-INVOICE.zip
