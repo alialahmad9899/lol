@@ -10,6 +10,13 @@ namespace InvoiceTemplate
 {
     public static class InvoiceRenderer
     {
+        public static bool IsSalesPurchase(object frmBill)
+        {
+            if (frmBill == null) return false;
+            string type = GetControlText(frmBill, "cb_Type_Bill");
+            return type == "فاتورة مبيع" || type == "فاتورة شراء";
+        }
+
         public static string Render(
             DataTable details,
             DataRow settingRow,
@@ -143,6 +150,7 @@ namespace InvoiceTemplate
         public static void Print(object frmBill)
         {
             if (frmBill == null) throw new ArgumentNullException("frmBill");
+            if (!IsSalesPurchase(frmBill)) throw new InvalidOperationException("New invoice template is restricted to sales/purchase invoices.");
 
             DataTable details = GetField<DataTable>(frmBill, "row_details_bill");
             DataRow settings = InvokeDataRowMethod(frmBill, "Get_Setting", 1);
@@ -159,8 +167,7 @@ namespace InvoiceTemplate
             string notes = GetControlText(frmBill, "txt_note");
             string words = InvokeNumToStr(frmBill, total);
 
-            string clientName = customer;
-            string html = Render(details, settings, null, null, null, "", clientName, type, number, date,
+            string html = Render(details, settings, null, null, null, "", customer, type, number, date,
                 total, paid, remaining, discount, words, status, notes, currency);
 
             Form host = new Form();
@@ -234,6 +241,7 @@ namespace InvoiceTemplate
             if (v == null) return 0d;
             double x;
             if (Double.TryParse(Convert.ToString(v, CultureInfo.CurrentCulture), NumberStyles.Any, CultureInfo.CurrentCulture, out x)) return x;
+            if (Double.TryParse(Convert.ToString(v, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out x)) return x;
             return 0d;
         }
 
