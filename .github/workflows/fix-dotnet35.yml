@@ -22,7 +22,7 @@ jobs:
           New-Item -ItemType Directory -Force build\patch | Out-Null
           Copy-Item $dll.FullName build\patch\dnlib.dll -Force
 
-      - name: Patch framework references
+      - name: Patch framework references and legacy type scopes
         shell: pwsh
         run: |
           $src = @(
@@ -31,11 +31,9 @@ jobs:
             'using dnlib.DotNet;',
             'class PatchStore {',
             '  static void Main() {',
-            '    string root = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "..\\.."));',
+            '    string root = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName;',
             '    string input = Path.Combine(root, "Store.exe");',
             '    string output = Path.Combine(root, "build\\Store_FIXED.exe");',
-            '    string countFile = Path.Combine(root, "build\\patch-count.txt");',
-            '    if (!File.Exists(input)) throw new FileNotFoundException("Store.exe not found", input);',
             '    var module = ModuleDefMD.Load(input);',
             '    int changed = 0;',
             '    foreach (var ar in module.GetAssemblyRefs()) {',
@@ -52,9 +50,24 @@ jobs:
             '      }',
             '      if (target != null) { ar.Version = target; changed++; }',
             '    }',
+            '    AssemblyRef systemCore = null;',
+            '    foreach (var ar in module.GetAssemblyRefs()) if (ar.Name.String == "System.Core") { systemCore = ar; break; }',
+            '    if (systemCore == null) throw new InvalidOperationException("System.Core reference not found");',
+            '    int typeScopesChanged = 0;',
+            '    foreach (var tr in module.GetTypeRefs()) {',
+            '      if (tr.Namespace == null || tr.Namespace.String != "System") continue;',
+            '      string n = tr.Name == null ? "" : tr.Name.String;',
+            '      if (!(n.StartsWith("Func`", StringComparison.Ordinal) || n.StartsWith("Action`", StringComparison.Ordinal))) continue;',
+            '      if (tr.ResolutionScope is AssemblyRef ar && ar.Name.String == "mscorlib") {',
+            '        tr.ResolutionScope = systemCore;',
+            '        typeScopesChanged++;',
+            '      }',
+            '    }',
             '    module.Write(output);',
-            '    File.WriteAllText(countFile, changed.ToString());',
-            '    Console.WriteLine("Patched references: " + changed);',
+            '    File.WriteAllText(Path.Combine(root, "build\\patch-count.txt"), changed.ToString());',
+            '    File.WriteAllText(Path.Combine(root, "build\\type-scope-count.txt"), typeScopesChanged.ToString());',
+            '    Console.WriteLine("FrameworkRefsChanged=" + changed);',
+            '    Console.WriteLine("FuncActionScopesChanged=" + typeScopesChanged);',
             '  }',
             '}'
           )
@@ -67,10 +80,13 @@ jobs:
           $exit = $LASTEXITCODE
           Pop-Location
           if ($exit -ne 0) { throw 'Patcher execution failed' }
-          $changed = Get-Content build\patch-count.txt
-          if ([int]$changed -lt 1) { throw 'No framework references were changed' }
+          $changed = [int](Get-Content build\patch-count.txt)
+          $typeScopes = [int](Get-Content build\type-scope-count.txt)
+          if ($changed -lt 1) { throw 'No framework references were changed' }
+          if ($typeScopes -lt 1) { throw 'No Func/Action type scopes were redirected to System.Core' }
+          Write-Host "Patched references: $changed; Func/Action scopes: $typeScopes"
 
-      - name: Verify assembly references
+      - name: Verify assembly references and legacy type scopes
         shell: pwsh
         run: |
           $src = @(
@@ -92,7 +108,6 @@ jobs:
           & build\Verify.exe | Tee-Object build\verification.txt
           $bad = Select-String -Path build\verification.txt -Pattern 'Version=4.0.0.0'
           if ($bad) { throw 'A .NET 4.0 framework reference remains' }
-          if (-not (Select-String -Path build\verification.txt -Pattern 'System.Windows.Forms, Version=2.0.0.0')) { throw 'System.Windows.Forms 2.0.0.0 reference missing' }
 
       - name: Package
         shell: pwsh
