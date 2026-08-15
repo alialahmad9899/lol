@@ -30,7 +30,7 @@ jobs:
           if ($null -eq $dll) { throw 'dnlib.dll not found' }
           Copy-Item $dll.FullName build\dnlib.dll -Force
 
-      - name: Patch original invoice print handler only
+      - name: Patch original invoice print handlers
         shell: pwsh
         run: |
           $src = @'
@@ -46,37 +46,32 @@ class Patch {
     string root = Directory.GetParent(Environment.CurrentDirectory).FullName;
     string input = Path.Combine(root,"Store.exe");
     string output = Path.Combine(root,"build\\Store_THERMAL.exe");
-    StringBuilder log = new StringBuilder();
-    try {
-      var module = ModuleDefMD.Load(input);
-      TypeDef form = null;
-      foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
-      log.AppendLine("Frm_Bill=" + (form != null));
-      if (form == null) throw new Exception("Store.Frm_Bill not found");
-      MethodDef target = null;
-      foreach (MethodDef m in form.Methods) if (m.Name == "bt_print_Click") { target=m; break; }
-      log.AppendLine("bt_print_Click=" + (target != null));
-      if (target == null) throw new Exception("bt_print_Click not found");
-      MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Print", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(object) }, null);
-      log.AppendLine("InvoiceRenderer.Print=" + (mi != null));
-      if (mi == null) throw new Exception("InvoiceRenderer.Print(object) not found");
-      log.AppendLine("TargetParams=" + target.Parameters.Count);
-      if (target.Parameters.Count != 3) throw new Exception("Unexpected bt_print_Click parameter count: " + target.Parameters.Count);
-      var imported = module.Import(mi);
-      CilBody body = new CilBody();
-      body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_1));
+    var log = new StringBuilder();
+    var module = ModuleDefMD.Load(input);
+    TypeDef form = null;
+    foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
+    if (form == null) throw new Exception("Store.Frm_Bill not found");
+    MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Print", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(object) }, null);
+    if (mi == null) throw new Exception("InvoiceRenderer.Print(object) not found");
+    var imported = module.Import(mi);
+    int patched=0;
+    foreach (MethodDef target in form.Methods) {
+      string n = target.Name.ToString();
+      if (n != "bt_print_Click" && n != "toolStripButton3_Click") continue;
+      if (target.Parameters.Count != 3) throw new Exception(n + " unexpected parameter count " + target.Parameters.Count);
+      var body = new CilBody();
+      body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
       body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));
       body.Instructions.Add(Instruction.Create(OpCodes.Ret));
       target.Body = body;
-      module.Write(output);
-      log.AppendLine("PATCHED=TRUE");
-      File.WriteAllText(Path.Combine(root,"build\\patch-diagnostic.txt"), log.ToString());
-    } catch (Exception ex) {
-      log.AppendLine("PATCHED=FALSE");
-      log.AppendLine(ex.ToString());
-      File.WriteAllText(Path.Combine(root,"build\\patch-diagnostic.txt"), log.ToString());
-      Environment.Exit(1);
+      log.AppendLine(n + " patched");
+      patched++;
     }
+    if (patched == 0) throw new Exception("No invoice print handlers found");
+    module.Write(output);
+    log.AppendLine("PATCHED_HANDLERS=" + patched);
+    File.WriteAllText(Path.Combine(root,"build\\patch-diagnostic.txt"), log.ToString());
+    Console.WriteLine(log.ToString());
   }
 }
 '@
@@ -85,57 +80,64 @@ class Patch {
           if ($LASTEXITCODE -ne 0) { throw 'patcher build failed' }
           Push-Location build
           & .\Patch.exe
-          $exit = $LASTEXITCODE
+          if ($LASTEXITCODE -ne 0) { throw 'patcher execution failed' }
           Pop-Location
-          Get-Content build\patch-diagnostic.txt
-          if ($exit -ne 0) { throw 'patcher execution failed' }
 
-      - name: Verify patched executable
+      - name: Verify final executable
         shell: pwsh
         run: |
           $src = @'
 using System;
 using System.Reflection;
+using dnlib.DotNet;
 class Verify {
   static void Main() {
-    Assembly a = Assembly.ReflectionOnlyLoadFrom("build\\Store_THERMAL.exe");
-    Console.WriteLine("Runtime=" + a.ImageRuntimeVersion);
-    Console.WriteLine("Frm_Bill=" + (a.GetType("Store.Frm_Bill", false) != null));
-    foreach (AssemblyName r in a.GetReferencedAssemblies()) {
-      if (r.Name == "InvoiceTemplate" || r.Name == "System" || r.Name == "System.Data" || r.Name == "System.Drawing" || r.Name == "System.Windows.Forms" || r.Name == "mscorlib") Console.WriteLine(r.FullName);
+    var module = ModuleDefMD.Load("build\\Store_THERMAL.exe");
+    TypeDef form = null;
+    foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
+    if (form == null) throw new Exception("Frm_Bill missing");
+    int found=0;
+    foreach (MethodDef m in form.Methods) {
+      string n=m.Name.ToString();
+      if (n=="bt_print_Click" || n=="toolStripButton3_Click") {
+        found++;
+        Console.WriteLine(n + " IL=" + m.Body.Instructions.Count);
+        if (m.Body.Instructions.Count != 3) throw new Exception(n + " was not reduced to the renderer adapter");
+      }
     }
-    if (a.GetType("Store.Frm_Bill", false) == null) throw new Exception("Frm_Bill missing");
-    bool found = false;
-    foreach (Type t in a.GetTypes()) {
-      if (t.FullName == "Store.Frm_Bill") foreach (MethodInfo m in t.GetMethods(BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)) if (m.Name == "bt_print_Click") found = true;
-    }
-    if (!found) throw new Exception("bt_print_Click missing");
+    if(found==0) throw new Exception("invoice print handlers missing");
+    Assembly a=Assembly.ReflectionOnlyLoadFrom("build\\Store_THERMAL.exe");
+    Console.WriteLine("Runtime="+a.ImageRuntimeVersion);
+    bool has=false; foreach(AssemblyName r in a.GetReferencedAssemblies()) if(r.Name=="InvoiceTemplate") has=true;
+    Console.WriteLine("InvoiceTemplate="+has);
+    if(!has) throw new Exception("InvoiceTemplate reference missing");
   }
 }
 '@
           $src | Set-Content build\Verify.cs -Encoding UTF8
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Verify.exe build\Verify.cs
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Verify.exe /reference:build\dnlib.dll build\Verify.cs
           if ($LASTEXITCODE -ne 0) { throw 'verifier build failed' }
           & build\Verify.exe | Tee-Object build\verification.txt
 
       - name: Package final thermal invoice build
-        if: success()
         shell: pwsh
         run: |
           Copy-Item build\InvoiceTemplate.dll build\InvoiceTemplate.Runtime.dll -Force
           Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.Runtime.dll,build\verification.txt,build\patch-diagnostic.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
-
-      - name: Upload diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: thermal-build-diagnostic
-          path: build/patch-diagnostic.txt
-          if-no-files-found: warn
 
       - name: Upload final package
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Store-THERMAL-INVOICE
-          path: build/Store-THERMAL-INVOICE.zip
+          path: build\Store-THERMAL-INVOICE.zip
+
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thermal-build-diagnostic
+          path: |
+            build\patch-diagnostic.txt
+            build\verification.txt
+          if-no-files-found: warn
