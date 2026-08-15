@@ -9,13 +9,15 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build template DLL
+      - name: Prepare build directory
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force build | Out-Null
+
+      - name: Build InvoiceTemplate.dll
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force build | Out-Null
           $csc35 = "$env:WINDIR\Microsoft.NET\Framework\v3.5\csc.exe"
           & $csc35 /nologo /target:library /out:build\InvoiceTemplate.dll /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Data.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Web.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Windows.Forms.dll" InvoiceTemplate\InvoiceRenderer.cs
           if ($LASTEXITCODE -ne 0) { throw 'template build failed' }
@@ -29,112 +31,37 @@ jobs:
           if ($null -eq $dll) { throw 'dnlib.dll not found' }
           Copy-Item $dll.FullName build\dnlib.dll -Force
 
-      - name: Patch bt_print_Click
+      - name: Compile patcher and verifier
         shell: pwsh
         run: |
-          $src = @'
-using System;
-using System.IO;
-using System.Reflection;
-using System.Text;
-using dnlib.DotNet;
-using dnlib.DotNet.Emit;
-using InvoiceTemplate;
-class Patch {
-  static void Main() {
-    string root = Directory.GetParent(Environment.CurrentDirectory).FullName;
-    string input = Path.Combine(root,"Store.exe");
-    string output = Path.Combine(root,"build\\Store_THERMAL.exe");
-    StringBuilder log = new StringBuilder();
-    try {
-      var module = ModuleDefMD.Load(input);
-      TypeDef form = null;
-      foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
-      log.AppendLine("Frm_Bill=" + (form != null));
-      if (form == null) throw new Exception("Store.Frm_Bill not found");
-      MethodDef target = null;
-      foreach (MethodDef m in form.Methods) if (m.Name == "bt_print_Click") { target=m; break; }
-      log.AppendLine("bt_print_Click=" + (target != null));
-      if (target == null) throw new Exception("bt_print_Click not found");
-      MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Print", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(object) }, null);
-      log.AppendLine("InvoiceRenderer.Print=" + (mi != null));
-      if (mi == null) throw new Exception("InvoiceRenderer.Print(object) not found");
-      log.AppendLine("TargetParams=" + target.Parameters.Count);
-      if (target.Parameters.Count != 3) throw new Exception("Unexpected parameter count: " + target.Parameters.Count);
-      var imported = module.Import(mi);
-      CilBody body = new CilBody();
-      body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-      body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));
-      body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-      target.Body = body;
-      module.Write(output);
-      log.AppendLine("PATCHED=TRUE");
-      File.WriteAllText(Path.Combine(root,"build\\patch-diagnostic.txt"), log.ToString());
-    } catch (Exception ex) {
-      log.AppendLine("PATCHED=FALSE");
-      log.AppendLine(ex.ToString());
-      File.WriteAllText(Path.Combine(root,"build\\patch-diagnostic.txt"), log.ToString());
-      Environment.Exit(1);
-    }
-  }
-}
-'@
-          $src | Set-Content build\Patch.cs -Encoding UTF8
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Patch.exe /reference:build\dnlib.dll /reference:build\InvoiceTemplate.dll build\Patch.cs
-          if ($LASTEXITCODE -ne 0) { throw 'patcher build failed' }
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\PatchThermalInvoice.exe /reference:build\dnlib.dll /reference:build\InvoiceTemplate.dll tools\PatchThermalInvoice.cs
+          if ($LASTEXITCODE -ne 0) { throw 'patcher compile failed' }
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\VerifyThermalInvoice.exe /reference:build\dnlib.dll tools\VerifyThermalInvoice.cs
+          if ($LASTEXITCODE -ne 0) { throw 'verifier compile failed' }
+
+      - name: Patch Store.exe
+        shell: pwsh
+        run: |
           Push-Location build
-          & .\Patch.exe
-          $exit = $LASTEXITCODE
+          & .\PatchThermalInvoice.exe
+          if ($LASTEXITCODE -ne 0) { throw 'patch execution failed' }
           Pop-Location
           Get-Content build\patch-diagnostic.txt
-          if ($exit -ne 0) { throw 'patcher execution failed' }
 
-      - name: Verify
+      - name: Verify patched executable
         shell: pwsh
         run: |
-          $src = @'
-using System;
-using System.Reflection;
-using dnlib.DotNet;
-class Verify {
-  static void Main() {
-    var module = ModuleDefMD.Load("build\\Store_THERMAL.exe");
-    TypeDef form = null;
-    foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
-    if (form == null) throw new Exception("Frm_Bill missing");
-    MethodDef m = null;
-    foreach (MethodDef x in form.Methods) if (x.Name == "bt_print_Click") { m=x; break; }
-    if (m == null) throw new Exception("bt_print_Click missing");
-    if (m.Body == null || m.Body.Instructions.Count != 3) throw new Exception("bt_print_Click not patched as expected");
-    Console.WriteLine("Runtime=" + module.RuntimeVersion);
-    Console.WriteLine("VERIFIED=TRUE");
-  }
-}
-'@
-          $src | Set-Content build\Verify.cs -Encoding UTF8
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Verify.exe /reference:build\dnlib.dll build\Verify.cs
-          if ($LASTEXITCODE -ne 0) { throw 'verifier build failed' }
-          & build\Verify.exe | Tee-Object build\verification.txt
+          & build\VerifyThermalInvoice.exe | Tee-Object build\verification.txt
+          if ($LASTEXITCODE -ne 0) { throw 'verification failed' }
 
-      - name: Package final thermal invoice build
+      - name: Package final build
         shell: pwsh
         run: |
           Copy-Item build\InvoiceTemplate.dll build\InvoiceTemplate.Runtime.dll -Force
           Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.Runtime.dll,build\patch-diagnostic.txt,build\verification.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
 
       - name: Upload final package
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Store-THERMAL-INVOICE
           path: build\Store-THERMAL-INVOICE.zip
-
-      - name: Upload diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: thermal-build-diagnostic
-          path: |
-            build\patch-diagnostic.txt
-            build\verification.txt
-          if-no-files-found: warn
