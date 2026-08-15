@@ -1,0 +1,98 @@
+name: Build final thermal invoice
+on:
+  push:
+    branches:
+      - fix/thermal-invoice-template-v2
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build renderer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          $csc35 = "$env:WINDIR\Microsoft.NET\Framework\v3.5\csc.exe"
+          & $csc35 /nologo /target:library /out:build\InvoiceTemplate.dll /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Data.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Web.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Windows.Forms.dll" InvoiceTemplate\InvoiceRenderer.cs
+          if ($LASTEXITCODE -ne 0) { throw 'InvoiceTemplate.dll build failed' }
+
+      - name: Download dnlib
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/dnlib/4.5.0' -OutFile dnlib.zip
+          Expand-Archive dnlib.zip -DestinationPath dnlib_pkg -Force
+          $dll = Get-ChildItem dnlib_pkg -Recurse -Filter dnlib.dll | Select-Object -First 1
+          if (-not $dll) { throw 'dnlib.dll not found' }
+          Copy-Item $dll.FullName build\dnlib.dll -Force
+
+      - name: Patch printer handler
+        shell: pwsh
+        run: |
+          $src = @'
+using System;
+using System.IO;
+using System.Reflection;
+using dnlib.DotNet;
+using dnlib.DotNet.Emit;
+using InvoiceTemplate;
+class P {
+  static void Main() {
+    string root = Directory.GetCurrentDirectory();
+    string input = Path.Combine(root, "..", "Store.exe");
+    string output = Path.Combine(root, "Store_THERMAL.exe");
+    var mod = ModuleDefMD.Load(input);
+    TypeDef form = null;
+    foreach (var t in mod.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
+    if (form == null) throw new Exception("Store.Frm_Bill not found");
+    MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Print", BindingFlags.Public|BindingFlags.Static, null, new Type[]{typeof(object)}, null);
+    if (mi == null) throw new Exception("InvoiceRenderer.Print(object) not found");
+    var imported = mod.Import(mi);
+    int count = 0;
+    foreach (var m in form.Methods) {
+      string n=m.Name.ToString();
+      if (n != "bt_print_Click" && n != "toolStripButton3_Click") continue;
+      var body = new CilBody();
+      body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+      body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));
+      body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+      m.Body = body;
+      count++;
+    }
+    if (count == 0) throw new Exception("No print handlers found");
+    mod.Write(output);
+    File.WriteAllText(Path.Combine(root,"patch.txt"), "Patched="+count);
+  }
+}
+'@
+          $src | Set-Content build\P.cs -Encoding UTF8
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\P.exe /reference:build\dnlib.dll /reference:build\InvoiceTemplate.dll build\P.cs
+          if ($LASTEXITCODE -ne 0) { throw 'patcher compile failed' }
+          Push-Location build
+          & .\P.exe
+          if ($LASTEXITCODE -ne 0) { throw 'patcher failed' }
+          Pop-Location
+
+      - name: Verify
+        shell: pwsh
+        run: |
+          if (!(Test-Path build\Store_THERMAL.exe)) { throw 'patched executable missing' }
+          if (!(Select-String -Path build\patch.txt -Pattern 'Patched=')) { throw 'patch marker missing' }
+          $bytes = [IO.File]::ReadAllBytes('build\Store_THERMAL.exe')
+          if ($bytes.Length -le 7000000) { throw 'patched executable unexpectedly small' }
+          Write-Host "Store_THERMAL.exe size=$($bytes.Length)"
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Copy-Item build\InvoiceTemplate.dll build\InvoiceTemplate.Runtime.dll -Force
+          Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.Runtime.dll,build\patch.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Store-THERMAL-INVOICE-FINAL
+          path: build\Store-THERMAL-INVOICE.zip
