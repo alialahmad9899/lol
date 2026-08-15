@@ -1,0 +1,1 @@
+Build fix branch. Source is legacy .NET Framework 2.0/3.5; rebuilt Frm_Bill must avoid .NET 4 references.
