@@ -1,8 +1,9 @@
-name: Build Store .NET 3.5 compatibility fix
-
+name: Build legacy-compatible Store
 on:
   push:
-    branches: [fix/dotnet35-frmbill]
+    branches:
+      - fix/dotnet35-frmbill
+  workflow_dispatch:
 
 jobs:
   patch:
@@ -12,102 +13,89 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download dnlib
-        shell: powershell
+        shell: pwsh
         run: |
-          Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/dnlib/4.5.0 -OutFile dnlib.nupkg
-          Expand-Archive -Path dnlib.nupkg -DestinationPath dnlib_pkg -Force
-          $dll = Get-ChildItem dnlib_pkg -Recurse -Filter dnlib.dll | Where-Object { $_.FullName -match 'net4' } | Select-Object -First 1
-          if (-not $dll) { throw 'dnlib.dll not found' }
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/dnlib/4.5.0' -OutFile dnlib.nupkg
+          Expand-Archive dnlib.nupkg -DestinationPath dnlib_pkg -Force
+          $dll = Get-ChildItem dnlib_pkg -Recurse -Filter dnlib.dll | Select-Object -First 1
+          if ($null -eq $dll) { throw 'dnlib.dll not found' }
           Copy-Item $dll.FullName .\dnlib.dll
 
-      - name: Patch assembly references
-        shell: powershell
+      - name: Patch framework references
+        shell: pwsh
         run: |
           New-Item -ItemType Directory -Force build\patch | Out-Null
-          @'
-using System;
-using System.IO;
-using dnlib.DotNet;
-
-class PatchStore
-{
-    static Version V(string s) { return new Version(s); }
-    static void Main()
-    {
-        string input = Path.GetFullPath("Store.exe");
-        string output = Path.GetFullPath("build\\Store_FIXED.exe");
-        var module = ModuleDefMD.Load(input);
-        int changed = 0;
-        foreach (var ar in module.GetAssemblyRefs())
-        {
-            if (ar.Version == null || ar.Version.Major != 4) continue;
-            Version target = null;
-            switch (ar.Name.String)
-            {
-                case "mscorlib":
-                case "System":
-                case "System.Data":
-                case "System.Drawing":
-                case "System.Windows.Forms":
-                case "System.Configuration":
-                    target = V("2.0.0.0");
-                    break;
-                case "System.Core":
-                    target = V("3.5.0.0");
-                    break;
-            }
-            if (target != null)
-            {
-                Console.WriteLine($"{ar.Name} {ar.Version} -> {target}");
-                ar.Version = target;
-                changed++;
-            }
-        }
-        module.Write(output);
-        Console.WriteLine("CHANGED=" + changed);
-    }
-}
-'@ | Set-Content build\patch\PatchStore.cs -Encoding UTF8
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\patch\PatchStore.exe /reference:dnlib.dll build\patch\PatchStore.cs
-          if ($LASTEXITCODE -ne 0) { throw 'PatchStore compilation failed' }
+          $src = @(
+            'using System;',
+            'using System.IO;',
+            'using dnlib.DotNet;',
+            'class PatchStore {',
+            '  static void Main() {',
+            '    string input = Path.GetFullPath("Store.exe");',
+            '    string output = Path.GetFullPath("build\\Store_FIXED.exe");',
+            '    var module = ModuleDefMD.Load(input);',
+            '    int changed = 0;',
+            '    foreach (var ar in module.GetAssemblyRefs()) {',
+            '      if (ar.Version == null || ar.Version.Major != 4) continue;',
+            '      Version target = null;',
+            '      switch (ar.Name.String) {',
+            '        case "mscorlib": target = new Version("2.0.0.0"); break;',
+            '        case "System": target = new Version("2.0.0.0"); break;',
+            '        case "System.Data": target = new Version("2.0.0.0"); break;',
+            '        case "System.Drawing": target = new Version("2.0.0.0"); break;',
+            '        case "System.Windows.Forms": target = new Version("2.0.0.0"); break;',
+            '        case "System.Configuration": target = new Version("2.0.0.0"); break;',
+            '        case "System.Core": target = new Version("3.5.0.0"); break;',
+            '      }',
+            '      if (target != null) { ar.Version = target; changed++; }',
+            '    }',
+            '    module.Write(output);',
+            '    File.WriteAllText("build\\patch-count.txt", changed.ToString());',
+            '  }',
+            '}'
+          )
+          $src -join [Environment]::NewLine | Set-Content build\patch\PatchStore.cs -Encoding UTF8
+          $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          & $csc /nologo /target:exe /out:build\patch\PatchStore.exe /reference:dnlib.dll build\patch\PatchStore.cs
+          if ($LASTEXITCODE -ne 0) { throw 'Patcher compilation failed' }
           & build\patch\PatchStore.exe
-          if ($LASTEXITCODE -ne 0) { throw 'PatchStore execution failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'Patcher execution failed' }
+          $changed = Get-Content build\patch-count.txt
+          if ([int]$changed -lt 1) { throw 'No framework references were changed' }
+          Write-Host "Patched references: $changed"
 
-      - name: Verify fixed references
-        shell: powershell
+      - name: Verify assembly references
+        shell: pwsh
         run: |
-          @'
-using System;
-using System.Reflection;
-class Verify
-{
-    static void Main()
-    {
-        var a = Assembly.ReflectionOnlyLoadFrom("build\\Store_FIXED.exe");
-        Console.WriteLine("Runtime=" + a.ImageRuntimeVersion);
-        foreach (var r in a.GetReferencedAssemblies())
-        {
-            if (r.Name == "System.Windows.Forms" || r.Name == "System" || r.Name == "System.Data" || r.Name == "System.Drawing" || r.Name == "mscorlib" || r.Name == "System.Core")
-                Console.WriteLine(r.FullName);
-        }
-    }
-}
-'@ | Set-Content build\Verify.cs -Encoding UTF8
+          $src = @(
+            'using System;',
+            'using System.Reflection;',
+            'class Verify {',
+            '  static void Main() {',
+            '    var a = Assembly.ReflectionOnlyLoadFrom("build\\Store_FIXED.exe");',
+            '    Console.WriteLine("Runtime=" + a.ImageRuntimeVersion);',
+            '    foreach (var r in a.GetReferencedAssemblies()) {',
+            '      if (r.Name == "System.Windows.Forms" || r.Name == "System" || r.Name == "System.Data" || r.Name == "System.Drawing" || r.Name == "System.Core" || r.Name == "mscorlib") Console.WriteLine(r.FullName);',
+            '    }',
+            '  }',
+            '}'
+          )
+          $src -join [Environment]::NewLine | Set-Content build\Verify.cs -Encoding UTF8
           & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Verify.exe build\Verify.cs
-          if ($LASTEXITCODE -ne 0) { throw 'Verify compilation failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'Verifier compilation failed' }
           & build\Verify.exe | Tee-Object build\verification.txt
-          if (Select-String -Path build\verification.txt -Pattern 'System.Windows.Forms, Version=4.0.0.0|System, Version=4.0.0.0|System.Data, Version=4.0.0.0|System.Drawing, Version=4.0.0.0|mscorlib, Version=4.0.0.0|System.Core, Version=4.0.0.0') {
-            throw 'A .NET 4.0 framework reference remains in Store_FIXED.exe'
-          }
+          $bad = Select-String -Path build\verification.txt -Pattern 'Version=4.0.0.0'
+          if ($bad) { throw 'A .NET 4.0 framework reference remains' }
+          $rt = Get-Content build\verification.txt | Select-String '^Runtime='
+          if ($rt -notmatch 'v2.0.50727') { Write-Warning 'Runtime header differs from original; references are still checked.' }
 
-      - name: Package fixed executable
-        shell: powershell
+      - name: Package
+        shell: pwsh
         run: |
-          Copy-Item Store.exe build\Store_ORIGINAL.exe
           Compress-Archive -Path build\Store_FIXED.exe,build\verification.txt -DestinationPath build\Store_FIXED_package.zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Store-FIXED-dotnet35
-          path: build/Store_FIXED_package.zip
+          path: build\Store_FIXED_package.zip
