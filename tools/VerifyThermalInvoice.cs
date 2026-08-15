@@ -6,9 +6,9 @@ class VerifyThermalInvoice
 {
     static int Main()
     {
-        string root = Directory.GetParent(Environment.CurrentDirectory).FullName;
+        string root = Directory.GetCurrentDirectory();
         string exe = Path.Combine(root, "build", "Store_THERMAL.exe");
-        if (!File.Exists(exe)) throw new Exception("Store_THERMAL.exe missing");
+        if (!File.Exists(exe)) throw new Exception("Store_THERMAL.exe missing: " + exe);
 
         var module = ModuleDefMD.Load(exe);
         TypeDef form = null;
