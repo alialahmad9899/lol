@@ -36,36 +36,48 @@ jobs:
             'using System;',
             'using System.IO;',
             'using System.Reflection;',
+            'using System.Text;',
             'using dnlib.DotNet;',
             'using dnlib.DotNet.Emit;',
             'using InvoiceTemplate;',
             'class Patch {',
             '  static void Main() {',
+            '    string root = Environment.CurrentDirectory;',
+            '    string input = Path.Combine(root, "Store.exe");',
+            '    string output = Path.Combine(root, "build\\Store_THERMAL.exe");',
+            '    StringBuilder log = new StringBuilder();',
             '    try {',
-            '      string root = Environment.CurrentDirectory;',
-            '      string input = Path.Combine(root, "Store.exe");',
-            '      string output = Path.Combine(root, "build\\Store_THERMAL.exe");',
             '      var module = ModuleDefMD.Load(input);',
             '      TypeDef form = null;',
             '      foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form = t; break; }',
+            '      log.AppendLine("Frm_Bill=" + (form != null));',
             '      if (form == null) throw new Exception("Store.Frm_Bill not found");',
             '      MethodDef target = null;',
             '      foreach (MethodDef m in form.Methods) if (m.Name == "GenerateInvoiceHtml") { target = m; break; }',
+            '      log.AppendLine("GenerateInvoiceHtml=" + (target != null));',
             '      if (target == null) throw new Exception("GenerateInvoiceHtml not found");',
             '      MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Render", BindingFlags.Public | BindingFlags.Static);',
+            '      log.AppendLine("Render=" + (mi != null));',
             '      if (mi == null) throw new Exception("InvoiceRenderer.Render not found");',
-            '      Console.WriteLine("GenerateInvoiceHtml parameters=" + target.Parameters.Count);',
-            '      Console.WriteLine("InvoiceRenderer.Render parameters=" + mi.GetParameters().Length);',
+            '      log.AppendLine("TargetParams=" + target.Parameters.Count);',
+            '      log.AppendLine("RenderParams=" + mi.GetParameters().Length);',
             '      if (target.Parameters.Count != mi.GetParameters().Length) throw new Exception("Parameter count mismatch");',
             '      var imported = module.Import(mi);',
+            '      log.AppendLine("Imported=" + imported.FullName);',
             '      CilBody body = new CilBody();',
             '      for (int i = 0; i < target.Parameters.Count; i++) body.Instructions.Add(Instruction.Create(OpCodes.Ldarg, target.Parameters[i]));',
             '      body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));',
             '      body.Instructions.Add(Instruction.Create(OpCodes.Ret));',
             '      target.Body = body;',
             '      module.Write(output);',
-            '      Console.WriteLine("Patched GenerateInvoiceHtml only");',
-            '    } catch (Exception ex) { Console.Error.WriteLine(ex.ToString()); Environment.Exit(1); }',
+            '      log.AppendLine("PATCHED=TRUE");',
+            '      File.WriteAllText(Path.Combine(root, "build\\patch-diagnostic.txt"), log.ToString());',
+            '    } catch (Exception ex) {',
+            '      log.AppendLine("PATCHED=FALSE");',
+            '      log.AppendLine(ex.ToString());',
+            '      File.WriteAllText(Path.Combine(root, "build\\patch-diagnostic.txt"), log.ToString());',
+            '      Environment.Exit(1);',
+            '    }',
             '  }',
             '}'
           )
@@ -76,10 +88,12 @@ jobs:
           & .\Patch.exe
           $exit = $LASTEXITCODE
           Pop-Location
+          Get-Content build\patch-diagnostic.txt
           if ($exit -ne 0) { throw 'Patcher execution failed' }
           Copy-Item build\InvoiceTemplate.dll build\InvoiceTemplate.Runtime.dll -Force
 
       - name: Verify target method and framework references
+        if: success()
         shell: pwsh
         run: |
           $src = @(
@@ -104,11 +118,21 @@ jobs:
           if (!(Select-String -Path build\verification.txt -Pattern 'Frm_Bill=True')) { throw 'Frm_Bill missing after patch' }
 
       - name: Package
+        if: success()
         shell: pwsh
         run: |
           Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.Runtime.dll,build\verification.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
 
-      - name: Upload artifact
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thermal-build-diagnostic
+          path: build\patch-diagnostic.txt
+          if-no-files-found: warn
+
+      - name: Upload package
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Store-THERMAL-INVOICE
