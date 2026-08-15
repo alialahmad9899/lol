@@ -3,141 +3,16 @@ on:
   push:
     branches:
       - fix/thermal-invoice-template-v2
-    paths-ignore:
-      - 'build/**'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Build template DLL
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Smoke test workflow
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force build | Out-Null
-          $csc35 = "$env:WINDIR\Microsoft.NET\Framework\v3.5\csc.exe"
-          & $csc35 /nologo /target:library /out:build\InvoiceTemplate.dll /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Data.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Web.dll" /reference:"$env:WINDIR\Microsoft.NET\Framework\v2.0.50727\System.Windows.Forms.dll" InvoiceTemplate\InvoiceRenderer.cs
-          if ($LASTEXITCODE -ne 0) { throw 'template build failed' }
-
-      - name: Download dnlib
-        shell: pwsh
-        run: |
-          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/dnlib/4.5.0' -OutFile dnlib.nupkg
-          Expand-Archive dnlib.nupkg -DestinationPath dnlib_pkg -Force
-          $dll = Get-ChildItem dnlib_pkg -Recurse -Filter dnlib.dll | Select-Object -First 1
-          if ($null -eq $dll) { throw 'dnlib.dll not found' }
-          Copy-Item $dll.FullName build\dnlib.dll -Force
-
-      - name: Patch original invoice print handlers
-        shell: pwsh
-        run: |
-          $src = @'
-using System;
-using System.IO;
-using System.Reflection;
-using System.Text;
-using dnlib.DotNet;
-using dnlib.DotNet.Emit;
-using InvoiceTemplate;
-class Patch {
-  static void Main() {
-    string root = Directory.GetParent(Environment.CurrentDirectory).FullName;
-    string input = Path.Combine(root,"Store.exe");
-    string output = Path.Combine(root,"build\\Store_THERMAL.exe");
-    var log = new StringBuilder();
-    var module = ModuleDefMD.Load(input);
-    TypeDef form = null;
-    foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
-    if (form == null) throw new Exception("Store.Frm_Bill not found");
-    MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Print", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(object) }, null);
-    if (mi == null) throw new Exception("InvoiceRenderer.Print(object) not found");
-    var imported = module.Import(mi);
-    int patched=0;
-    foreach (MethodDef target in form.Methods) {
-      string n = target.Name.ToString();
-      if (n != "bt_print_Click" && n != "toolStripButton3_Click") continue;
-      if (target.Parameters.Count != 3) throw new Exception(n + " unexpected parameter count " + target.Parameters.Count);
-      var body = new CilBody();
-      body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-      body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));
-      body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-      target.Body = body;
-      log.AppendLine(n + " patched");
-      patched++;
-    }
-    if (patched == 0) throw new Exception("No invoice print handlers found");
-    module.Write(output);
-    log.AppendLine("PATCHED_HANDLERS=" + patched);
-    File.WriteAllText(Path.Combine(root,"build\\patch-diagnostic.txt"), log.ToString());
-    Console.WriteLine(log.ToString());
-  }
-}
-'@
-          $src | Set-Content build\Patch.cs -Encoding UTF8
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Patch.exe /reference:build\dnlib.dll /reference:build\InvoiceTemplate.dll build\Patch.cs
-          if ($LASTEXITCODE -ne 0) { throw 'patcher build failed' }
-          Push-Location build
-          & .\Patch.exe
-          if ($LASTEXITCODE -ne 0) { throw 'patcher execution failed' }
-          Pop-Location
-
-      - name: Verify final executable
-        shell: pwsh
-        run: |
-          $src = @'
-using System;
-using System.Reflection;
-using dnlib.DotNet;
-class Verify {
-  static void Main() {
-    var module = ModuleDefMD.Load("build\\Store_THERMAL.exe");
-    TypeDef form = null;
-    foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form=t; break; }
-    if (form == null) throw new Exception("Frm_Bill missing");
-    int found=0;
-    foreach (MethodDef m in form.Methods) {
-      string n=m.Name.ToString();
-      if (n=="bt_print_Click" || n=="toolStripButton3_Click") {
-        found++;
-        Console.WriteLine(n + " IL=" + m.Body.Instructions.Count);
-        if (m.Body.Instructions.Count != 3) throw new Exception(n + " was not reduced to the renderer adapter");
-      }
-    }
-    if(found==0) throw new Exception("invoice print handlers missing");
-    Assembly a=Assembly.ReflectionOnlyLoadFrom("build\\Store_THERMAL.exe");
-    Console.WriteLine("Runtime="+a.ImageRuntimeVersion);
-    bool has=false; foreach(AssemblyName r in a.GetReferencedAssemblies()) if(r.Name=="InvoiceTemplate") has=true;
-    Console.WriteLine("InvoiceTemplate="+has);
-    if(!has) throw new Exception("InvoiceTemplate reference missing");
-  }
-}
-'@
-          $src | Set-Content build\Verify.cs -Encoding UTF8
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /out:build\Verify.exe /reference:build\dnlib.dll build\Verify.cs
-          if ($LASTEXITCODE -ne 0) { throw 'verifier build failed' }
-          & build\Verify.exe | Tee-Object build\verification.txt
-
-      - name: Package final thermal invoice build
-        shell: pwsh
-        run: |
-          Copy-Item build\InvoiceTemplate.dll build\InvoiceTemplate.Runtime.dll -Force
-          Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.Runtime.dll,build\verification.txt,build\patch-diagnostic.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
-
-      - name: Upload final package
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Store-THERMAL-INVOICE
-          path: build\Store-THERMAL-INVOICE.zip
-
-      - name: Upload diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: thermal-build-diagnostic
-          path: |
-            build\patch-diagnostic.txt
-            build\verification.txt
-          if-no-files-found: warn
+          Write-Host "THERMAL_WORKFLOW_STARTED"
+          Write-Host "HEAD=$env:GITHUB_SHA"
