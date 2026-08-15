@@ -1,0 +1,1 @@
+This branch is for legacy .NET 3.5 compatibility work. Binary verification is required before delivery.
