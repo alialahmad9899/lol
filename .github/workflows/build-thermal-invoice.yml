@@ -41,26 +41,31 @@ jobs:
             'using InvoiceTemplate;',
             'class Patch {',
             '  static void Main() {',
-            '    string root = Environment.CurrentDirectory;',
-            '    string input = Path.Combine(root, "Store.exe");',
-            '    string output = Path.Combine(root, "build\\Store_THERMAL.exe");',
-            '    var module = ModuleDefMD.Load(input);',
-            '    TypeDef form = null;',
-            '    foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form = t; break; }',
-            '    if (form == null) throw new Exception("Store.Frm_Bill not found");',
-            '    MethodDef target = null;',
-            '    foreach (MethodDef m in form.Methods) if (m.Name == "GenerateInvoiceHtml") { target = m; break; }',
-            '    if (target == null) throw new Exception("GenerateInvoiceHtml not found");',
-            '    MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Render", BindingFlags.Public | BindingFlags.Static);',
-            '    if (mi == null) throw new Exception("InvoiceRenderer.Render not found");',
-            '    var imported = module.Import(mi);',
-            '    CilBody body = new CilBody();',
-            '    for (int i = 1; i <= 18; i++) body.Instructions.Add(Instruction.Create(OpCodes.Ldarg, target.Parameters[i - 1]));',
-            '    body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));',
-            '    body.Instructions.Add(Instruction.Create(OpCodes.Ret));',
-            '    target.Body = body;',
-            '    module.Write(output);',
-            '    Console.WriteLine("Patched GenerateInvoiceHtml only");',
+            '    try {',
+            '      string root = Environment.CurrentDirectory;',
+            '      string input = Path.Combine(root, "Store.exe");',
+            '      string output = Path.Combine(root, "build\\Store_THERMAL.exe");',
+            '      var module = ModuleDefMD.Load(input);',
+            '      TypeDef form = null;',
+            '      foreach (TypeDef t in module.Types) if (t.FullName == "Store.Frm_Bill") { form = t; break; }',
+            '      if (form == null) throw new Exception("Store.Frm_Bill not found");',
+            '      MethodDef target = null;',
+            '      foreach (MethodDef m in form.Methods) if (m.Name == "GenerateInvoiceHtml") { target = m; break; }',
+            '      if (target == null) throw new Exception("GenerateInvoiceHtml not found");',
+            '      MethodInfo mi = typeof(InvoiceRenderer).GetMethod("Render", BindingFlags.Public | BindingFlags.Static);',
+            '      if (mi == null) throw new Exception("InvoiceRenderer.Render not found");',
+            '      Console.WriteLine("GenerateInvoiceHtml parameters=" + target.Parameters.Count);',
+            '      Console.WriteLine("InvoiceRenderer.Render parameters=" + mi.GetParameters().Length);',
+            '      if (target.Parameters.Count != mi.GetParameters().Length) throw new Exception("Parameter count mismatch");',
+            '      var imported = module.Import(mi);',
+            '      CilBody body = new CilBody();',
+            '      for (int i = 0; i < target.Parameters.Count; i++) body.Instructions.Add(Instruction.Create(OpCodes.Ldarg, target.Parameters[i]));',
+            '      body.Instructions.Add(Instruction.Create(OpCodes.Call, imported));',
+            '      body.Instructions.Add(Instruction.Create(OpCodes.Ret));',
+            '      target.Body = body;',
+            '      module.Write(output);',
+            '      Console.WriteLine("Patched GenerateInvoiceHtml only");',
+            '    } catch (Exception ex) { Console.Error.WriteLine(ex.ToString()); Environment.Exit(1); }',
             '  }',
             '}'
           )
@@ -72,7 +77,7 @@ jobs:
           $exit = $LASTEXITCODE
           Pop-Location
           if ($exit -ne 0) { throw 'Patcher execution failed' }
-          Copy-Item build\InvoiceTemplate.dll build\Store_THERMAL.dll -Force
+          Copy-Item build\InvoiceTemplate.dll build\InvoiceTemplate.Runtime.dll -Force
 
       - name: Verify target method and framework references
         shell: pwsh
@@ -86,8 +91,7 @@ jobs:
             '    Console.WriteLine("Runtime=" + a.ImageRuntimeVersion);',
             '    Type t = a.GetType("Store.Frm_Bill", false);',
             '    Console.WriteLine("Frm_Bill=" + (t != null));',
-            '    foreach (AssemblyName r in a.GetReferencedAssemblies()) if (r.Name == "System.Windows.Forms" || r.Name == "System" || r.Name == "System.Data" || r.Name == "System.Drawing" || r.Name == "System.Core" || r.Name == "mscorlib") Console.WriteLine(r.FullName);',
-            '    foreach (AssemblyName r in a.GetReferencedAssemblies()) if (r.Name == "InvoiceTemplate") Console.WriteLine(r.FullName);',
+            '    foreach (AssemblyName r in a.GetReferencedAssemblies()) if (r.Name == "System.Windows.Forms" || r.Name == "System" || r.Name == "System.Data" || r.Name == "System.Drawing" || r.Name == "System.Core" || r.Name == "mscorlib" || r.Name == "InvoiceTemplate") Console.WriteLine(r.FullName);',
             '  }',
             '}'
           )
@@ -102,7 +106,7 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.dll,build\verification.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
+          Compress-Archive -Path build\Store_THERMAL.exe,build\InvoiceTemplate.Runtime.dll,build\verification.txt -DestinationPath build\Store-THERMAL-INVOICE.zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
