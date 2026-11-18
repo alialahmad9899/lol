@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aviabet-demo-audit"
+version = "0.1.0"
+description = "Read-only statistical and integrity audit tools for AviaBET demo history"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+aviabet-audit = "aviabet_audit.analysis:main"
+aviabet-audit-bot = "aviabet_audit.telegram_bot:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
