@@ -18,6 +18,21 @@ class LoadRoundsTests(unittest.TestCase):
         )
         self.assertEqual([row.round_id for row in rows], ["10", "11", "12"])
 
+    def test_sorts_by_timezone_aware_timestamps(self):
+        rows = load_rounds(
+            "round_id,multiplier,timestamp\n"
+            "round-b,2.0,2026-11-18T10:02:00Z\n"
+            "round-a,1.2,2026-11-18T10:01:00+00:00\n"
+        )
+        self.assertEqual([row.round_id for row in rows], ["round-a", "round-b"])
+
+    def test_rejects_timestamp_without_timezone(self):
+        with self.assertRaises(AuditDataError):
+            load_rounds(
+                "round_id,multiplier,timestamp\n"
+                "round-1,1.3,2026-11-18T10:00:00\n"
+            )
+
     def test_rejects_duplicate_round_ids(self):
         with self.assertRaises(AuditDataError):
             load_rounds("round_id,multiplier\n1,1.2\n1,1.8\n")
