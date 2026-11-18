@@ -9,6 +9,7 @@ import math
 import statistics
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -43,6 +44,20 @@ class AuditReport:
     warnings: tuple[str, ...]
 
 
+def _parse_iso_timestamp(value: str, line_number: int) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise AuditDataError(
+            f"Line {line_number}: timestamp must be ISO-8601"
+        ) from exc
+    if parsed.tzinfo is None:
+        raise AuditDataError(
+            f"Line {line_number}: timestamp must include a timezone"
+        )
+    return parsed.astimezone(timezone.utc)
+
+
 def load_rounds(csv_text: str) -> list[RoundRecord]:
     """Parse, validate, deduplicate, and chronologically order round history."""
     if not isinstance(csv_text, str):
@@ -63,6 +78,7 @@ def load_rounds(csv_text: str) -> list[RoundRecord]:
 
     records: list[RoundRecord] = []
     seen_ids: set[str] = set()
+    parsed_timestamps: list[datetime] = []
 
     for line_number, row in enumerate(reader, start=2):
         if len(records) >= MAX_ROWS:
@@ -99,18 +115,25 @@ def load_rounds(csv_text: str) -> list[RoundRecord]:
                 f"{MIN_MULTIPLIER:g} and {MAX_MULTIPLIER:g}"
             )
 
+        if timestamp:
+            parsed_timestamps.append(_parse_iso_timestamp(timestamp, line_number))
         seen_ids.add(round_id)
         records.append(RoundRecord(round_id, multiplier, timestamp))
 
     if not records:
         raise AuditDataError("CSV contains no round records")
 
-    # If every ID is numeric, ascending IDs are treated as chronological order.
-    # Otherwise preserve the input order and explicitly warn the user.
-    if all(record.round_id.isdecimal() for record in records):
+    # Prefer explicit timezone-aware timestamps. Otherwise numeric IDs are
+    # treated as chronological. For nonnumeric IDs, preserve CSV row order.
+    if len(parsed_timestamps) == len(records):
+        records = [
+            record
+            for _, record in sorted(
+                zip(parsed_timestamps, records), key=lambda item: item[0]
+            )
+        ]
+    elif all(record.round_id.isdecimal() for record in records):
         records.sort(key=lambda record: int(record.round_id))
-    else:
-        records = list(records)
 
     return records
 
