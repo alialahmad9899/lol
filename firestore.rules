@@ -100,6 +100,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    function isCoursePublished(courseId) {
+      return exists(/databases/$(database)/documents/courses/$(courseId))
+        && get(/databases/$(database)/documents/courses/$(courseId)).data.status == 'published';
+    }
+
+    function isFreeCourse(courseId) {
+      return isCoursePublished(courseId)
+        && get(/databases/$(database)/documents/courses/$(courseId)).data.isFree == true
+        && get(/databases/$(database)/documents/courses/$(courseId)).data.price == 0;
+    }
+
+    function hasActiveCourseEnrollment(userId, courseId) {
+      return exists(
+          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
+        )
+        && get(
+          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
+        ).data.status == 'active';
+    }
+
     function isProgramPublished(programId) {
       return exists(/databases/$(database)/documents/programs/$(programId))
         && get(/databases/$(database)/documents/programs/$(programId)).data.status == 'published';
@@ -124,12 +144,7 @@ service cloud.firestore {
       allow get, list: if isAdmin()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
 
-      allow create: if isOwner(request.resource.data.userId)
-        && !hasActiveCourseEnrollment(
-          request.resource.data.userId,
-          request.resource.data.courseId
-        )
-        && request.resource.data.keys().hasOnly([
+      allow create: if request.resource.data.keys().hasOnly([
           'userId',
           'courseId',
           'courseTitle',
@@ -151,6 +166,13 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
+        && request.resource.data.userId is string
+        && request.resource.data.courseId is string
+        && isOwner(request.resource.data.userId)
+        && !hasActiveCourseEnrollment(
+          request.resource.data.userId,
+          request.resource.data.courseId
+        )
         && exists(/databases/$(database)/documents/courses/$(request.resource.data.courseId))
         && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.status == 'published'
         && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.isFree == false
@@ -272,26 +294,6 @@ service cloud.firestore {
         );
 
       allow delete: if isAdmin();
-    }
-
-    function isCoursePublished(courseId) {
-      return exists(/databases/$(database)/documents/courses/$(courseId))
-        && get(/databases/$(database)/documents/courses/$(courseId)).data.status == 'published';
-    }
-
-    function isFreeCourse(courseId) {
-      return isCoursePublished(courseId)
-        && get(/databases/$(database)/documents/courses/$(courseId)).data.isFree == true
-        && get(/databases/$(database)/documents/courses/$(courseId)).data.price == 0;
-    }
-
-    function hasActiveCourseEnrollment(userId, courseId) {
-      return exists(
-          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
-        )
-        && get(
-          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
-        ).data.status == 'active';
     }
 
     match /courses/{courseId} {
