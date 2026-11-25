@@ -185,19 +185,19 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                 children: <Widget>[
                   Chip(label: Text(course.level)),
                   if (course.durationMinutes != null)
-                    Chip(label: Text('\${course.durationMinutes} دقيقة')),
+                    Chip(label: Text('${course.durationMinutes} دقيقة')),
                   Chip(
                     label: Text(
                       course.isFree
                           ? 'مجاني'
-                          : '\${course.price} \${course.currency}',
+                          : '${course.price} ${course.currency}',
                     ),
                   ),
                 ],
               ),
               if (course.instructorName.isNotEmpty)
                 Text(
-                  'تقديم: \${course.instructorName}',
+                  'تقديم: ${course.instructorName}',
                   style: const TextStyle(color: RoohTheme.mutedInk),
                 ),
               if (course.description.isNotEmpty) ...<Widget>[
@@ -503,8 +503,8 @@ class _CourseCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       course.isFree
-                          ? 'مجاني · \${course.level}'
-                          : '\${course.price} \${course.currency} · \${course.level}',
+                          ? 'مجاني · ${course.level}'
+                          : '${course.price} ${course.currency} · ${course.level}',
                       style: const TextStyle(
                         color: RoohTheme.primary,
                         fontWeight: FontWeight.w700,
@@ -570,7 +570,7 @@ class _LessonTile extends StatelessWidget {
                     Text(lesson.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                     if (lesson.durationMinutes != null)
                       Text(
-                        '\${lesson.durationMinutes} دقيقة',
+                        '${lesson.durationMinutes} دقيقة',
                         style: const TextStyle(
                           color: RoohTheme.mutedInk,
                           fontSize: 11,
