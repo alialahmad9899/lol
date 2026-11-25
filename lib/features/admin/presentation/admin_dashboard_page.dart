@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../payments/presentation/admin_payment_requests_page.dart';
 import 'admin_users_page.dart';
 import '../data/admin_repository.dart';
 
@@ -93,11 +92,6 @@ const _courseFields = <_AdminFieldSpec>[
   _AdminFieldSpec('level', 'المستوى', defaultValue: 'عام'),
   _AdminFieldSpec('durationMinutes', 'المدة بالدقائق',
       kind: _AdminFieldKind.integer, defaultValue: 0),
-  _AdminFieldSpec('price', 'السعر (0 للمجاني)',
-      kind: _AdminFieldKind.decimal, defaultValue: 0),
-  _AdminFieldSpec('currency', 'العملة', defaultValue: 'USD'),
-  _AdminFieldSpec('isFree', 'كورس مجاني',
-      kind: _AdminFieldKind.boolean, defaultValue: true),
   _AdminFieldSpec('sortOrder', 'ترتيب العرض',
       kind: _AdminFieldKind.integer, defaultValue: 0),
   _AdminFieldSpec('status', 'حالة النشر',
@@ -127,11 +121,6 @@ const _programFields = <_AdminFieldSpec>[
       kind: _AdminFieldKind.multiline),
   _AdminFieldSpec('durationDays', 'عدد الأيام',
       kind: _AdminFieldKind.integer, defaultValue: 7, required: true),
-  _AdminFieldSpec('price', 'السعر (0 للمجاني)',
-      kind: _AdminFieldKind.decimal, defaultValue: 0),
-  _AdminFieldSpec('currency', 'العملة', defaultValue: 'USD'),
-  _AdminFieldSpec('isFree', 'برنامج مجاني',
-      kind: _AdminFieldKind.boolean, defaultValue: true),
   _AdminFieldSpec('sortOrder', 'ترتيب العرض',
       kind: _AdminFieldKind.integer, defaultValue: 0),
   _AdminFieldSpec('status', 'حالة النشر',
@@ -267,23 +256,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              _AdminSectionCard(
-                spec: const _AdminSectionSpec(
-                  title: 'طلبات الدفع اليدوي',
-                  description:
-                      'مراجعة مراجع التحويل وقبول الطلبات أو رفضها',
-                  collectionPath: 'paymentRequests',
-                  fields: <_AdminFieldSpec>[],
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => AdminPaymentRequestsPage(
-                      reviewerUid: widget.userId,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
               ..._sections.map(
                 (section) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -356,16 +328,13 @@ class __AdminRecordsPageState extends State<_AdminRecordsPage> {
     );
   }
 
-  void _validatePricing(Map<String, dynamic> data) {
-    if (!data.containsKey('isFree') || !data.containsKey('price')) return;
-    final bool isFree = data['isFree'] == true;
-    final Object? rawPrice = data['price'];
-    final num price = rawPrice is num ? rawPrice : -1;
-    if (isFree && price != 0) {
-      throw StateError('السجل المجاني يجب أن يكون سعره صفراً.');
-    }
-    if (!isFree && price <= 0) {
-      throw StateError('أدخل سعراً أكبر من صفر للسجل المدفوع.');
+  void _applyFreeReleasePolicy(Map<String, dynamic> data) {
+    final String collectionPath =
+        widget.collectionPath ?? widget.spec.collectionPath;
+    if (collectionPath == 'courses' || collectionPath == 'programs') {
+      data['isFree'] = true;
+      data['price'] = 0;
+      data['currency'] = 'EUR';
     }
   }
 
@@ -374,7 +343,7 @@ class __AdminRecordsPageState extends State<_AdminRecordsPage> {
     if (data == null) return;
 
     try {
-      _validatePricing(data);
+      _applyFreeReleasePolicy(data);
       await _collection.add(<String, dynamic>{
         ...data,
         'createdAt': FieldValue.serverTimestamp(),
@@ -395,7 +364,7 @@ class __AdminRecordsPageState extends State<_AdminRecordsPage> {
     if (data == null) return;
 
     try {
-      _validatePricing(data);
+      _applyFreeReleasePolicy(data);
       await document.reference.update(<String, dynamic>{
         ...data,
         'updatedAt': FieldValue.serverTimestamp(),

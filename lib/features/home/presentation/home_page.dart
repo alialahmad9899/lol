@@ -283,7 +283,7 @@ class HomePage extends StatelessWidget {
                 icon: Icons.school_outlined,
                 title: 'دورات رُوح',
                 description:
-                    'تصفح الدورات المجانية والمدفوعة وتابع تقدمك في الدروس.',
+                    'تصفح الدورات المجانية وتابع تقدمك في الدروس.',
                 onTap: () => _openCourses(context),
               ),
               const SizedBox(height: 12),

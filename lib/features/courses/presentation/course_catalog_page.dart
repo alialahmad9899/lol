@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../payments/data/payment_request_repository.dart';
 import '../data/course_repository.dart';
 
 class CourseCatalogPage extends StatefulWidget {
@@ -155,7 +154,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      course.isFree ? 'كورس مجاني' : 'كورس مدفوع',
+                      'كورس مجاني',
                       style: const TextStyle(color: Colors.white),
                     ),
                     const SizedBox(height: 12),
@@ -189,9 +188,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                     Chip(label: Text('${course.durationMinutes} دقيقة')),
                   Chip(
                     label: Text(
-                      course.isFree
-                          ? 'مجاني'
-                          : '${course.price} ${course.currency}',
+                      'مجاني',
                     ),
                   ),
                 ],
@@ -234,9 +231,10 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                   label: Text(_busy ? 'جارٍ التسجيل...' : 'التحق بالكورس مجاناً'),
                 )
               else
-                _CoursePaymentRequestPanel(
-                  userId: widget.userId,
-                  course: course,
+                const _CourseMessage(
+                  title: 'غير متاح في الإصدار المجاني',
+                  message: 'سيظهر هذا الكورس عند إطلاق المرحلة المخصصة له.',
+                  icon: Icons.lock_outline_rounded,
                 ),
               const SizedBox(height: 24),
               Text(
@@ -263,201 +261,6 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
           );
         },
       ),
-    );
-  }
-}
-
-class _CoursePaymentRequestPanel extends StatefulWidget {
-  const _CoursePaymentRequestPanel({
-    required this.userId,
-    required this.course,
-  });
-
-  final String userId;
-  final Course course;
-
-  @override
-  State<_CoursePaymentRequestPanel> createState() =>
-      _CoursePaymentRequestPanelState();
-}
-
-class _CoursePaymentRequestPanelState
-    extends State<_CoursePaymentRequestPanel> {
-  late final PaymentRequestRepository _repository = PaymentRequestRepository();
-  final TextEditingController _referenceController = TextEditingController();
-  bool _submitting = false;
-
-  @override
-  void dispose() {
-    _referenceController.dispose();
-    super.dispose();
-  }
-
-  void _message(String value, {bool error = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(value),
-        backgroundColor: error ? const Color(0xFF9B382B) : RoohTheme.primary,
-      ),
-    );
-  }
-
-  Future<String?> _askForReference() {
-    _referenceController.clear();
-    return showDialog<String>(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('إرسال مرجع التحويل'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'أدخل رقم مرجع تحويل شام كاش بعد إتمام التحويل خارج التطبيق. '
-              'سيبقى الكورس مقفلاً حتى تراجع الإدارة الطلب.',
-              style: TextStyle(height: 1.6),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _referenceController,
-              maxLength: 120,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'رقم مرجع التحويل',
-                prefixIcon: Icon(Icons.receipt_long_outlined),
-              ),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final String reference = _referenceController.text.trim();
-              if (reference.length < 4) {
-                _message('أدخل مرجعاً صحيحاً لا يقل عن 4 محارف.', error: true);
-                return;
-              }
-              Navigator.of(dialogContext).pop(reference);
-            },
-            child: const Text('إرسال الطلب'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _submit() async {
-    final String? reference = await _askForReference();
-    if (reference == null) return;
-
-    setState(() => _submitting = true);
-    try {
-      await _repository.submitCourseReference(
-        userId: widget.userId,
-        courseId: widget.course.id,
-        courseTitle: widget.course.title,
-        amount: widget.course.price,
-        currency: widget.course.currency,
-        transferReference: reference,
-      );
-      _message('وصل طلبك إلى الإدارة. سيبقى الكورس مقفلاً حتى تتم المراجعة.');
-    } on StateError catch (error) {
-      _message(error.message.toString(), error: true);
-    } catch (_) {
-      _message('تعذر إرسال الطلب. تحقق من اتصالك وحاول مرة أخرى.', error: true);
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<PaymentRequest?>(
-      stream: _repository.watchCourseRequest(
-        userId: widget.userId,
-        courseId: widget.course.id,
-      ),
-      builder: (BuildContext context, AsyncSnapshot<PaymentRequest?> snapshot) {
-        if (snapshot.hasError) {
-          return const _CourseMessage(
-            title: 'تعذر التحقق من طلب الدفع',
-            message: 'تحقق من صلاحيات قاعدة البيانات وحاول مجدداً.',
-            icon: Icons.cloud_off_outlined,
-          );
-        }
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final PaymentRequest? request = snapshot.data;
-        if (request?.status == 'pending') {
-          return _CourseMessage(
-            title: 'طلب الدفع قيد المراجعة',
-            message:
-                'رقم المرجع: ${request!.transferReference}\n'
-                'لن تُفتح الدروس قبل اعتماد الإدارة للتحويل.',
-            icon: Icons.hourglass_top_rounded,
-          );
-        }
-        if (request?.status == 'approved') {
-          return const _CourseMessage(
-            title: 'تم اعتماد طلبك',
-            message: 'تم منح حسابك صلاحية هذا الكورس. حدّث الصفحة لعرض الدروس.',
-            icon: Icons.verified_outlined,
-          );
-        }
-        if (request?.status == 'rejected') {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _CourseMessage(
-                title: 'لم تتم الموافقة على الطلب',
-                message: request!.reviewNote.isEmpty
-                    ? 'يمكنك مراجعة الإدارة وإرسال مرجع جديد بعد التأكد من التحويل.'
-                    : request.reviewNote,
-                icon: Icons.info_outline_rounded,
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _submitting ? null : _submit,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('إرسال مرجع جديد'),
-              ),
-            ],
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            const _CourseMessage(
-              title: 'هذا الكورس يتطلب اشتراكاً',
-              message:
-                  'بعد إتمام التحويل خارج التطبيق، أرسل رقم المرجع لتراجعه الإدارة. لا يتم فتح الدروس تلقائياً.',
-              icon: Icons.lock_outline_rounded,
-            ),
-            const SizedBox(height: 10),
-            FilledButton.icon(
-              onPressed: _submitting ? null : _submit,
-              icon: _submitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.receipt_long_outlined),
-              label: Text(
-                _submitting ? 'جارٍ إرسال الطلب...' : 'إرسال مرجع التحويل',
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

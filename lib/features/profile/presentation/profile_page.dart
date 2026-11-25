@@ -49,6 +49,21 @@ class _ProfilePageState extends State<ProfilePage> {
     final String currentGoal = profile['primaryGoal'] is String
         ? profile['primaryGoal'] as String
         : '';
+    final int? currentAge = profile['age'] is int ? profile['age'] as int : null;
+    final String? currentGender =
+        profile['gender'] is String ? profile['gender'] as String : null;
+    final String currentCity =
+        profile['city'] is String ? profile['city'] as String : '';
+    final String currentCountry =
+        profile['country'] is String ? profile['country'] as String : '';
+    final String? currentContentStyle = profile['preferredContentStyle'] is String
+        ? profile['preferredContentStyle'] as String
+        : null;
+    final int? currentDailyMinutes =
+        profile['dailyTimeMinutes'] is int ? profile['dailyTimeMinutes'] as int : null;
+    final String? currentPreferredTime = profile['preferredTime'] is String
+        ? profile['preferredTime'] as String
+        : null;
 
     final _ProfileEditResult? result =
         await showDialog<_ProfileEditResult>(
@@ -57,6 +72,13 @@ class _ProfilePageState extends State<ProfilePage> {
         initialName: currentName,
         initialInterests: currentInterests,
         initialGoal: currentGoal,
+        initialAge: currentAge,
+        initialGender: currentGender,
+        initialCity: currentCity,
+        initialCountry: currentCountry,
+        initialContentStyle: currentContentStyle,
+        initialDailyMinutes: currentDailyMinutes,
+        initialPreferredTime: currentPreferredTime,
       ),
     );
     if (result == null) return;
@@ -67,6 +89,13 @@ class _ProfilePageState extends State<ProfilePage> {
         displayName: result.displayName,
         interests: result.interests,
         primaryGoal: result.primaryGoal,
+        age: result.age,
+        gender: result.gender,
+        city: result.city,
+        country: result.country,
+        preferredContentStyle: result.preferredContentStyle,
+        dailyTimeMinutes: result.dailyTimeMinutes,
+        preferredTime: result.preferredTime,
       );
       _showMessage('تم تحديث ملفك الشخصي بنجاح.');
     } catch (_) {
@@ -142,6 +171,16 @@ class _ProfilePageState extends State<ProfilePage> {
           final List<String> interests = rawInterests is List
               ? rawInterests.whereType<String>().toList(growable: false)
               : const <String>[];
+          final int? age =
+              profile['age'] is int ? profile['age'] as int : null;
+          final String gender = _genderLabel(profile['gender'] as String?);
+          final String city =
+              profile['city'] is String ? (profile['city'] as String).trim() : '';
+          final String country = profile['country'] is String
+              ? (profile['country'] as String).trim()
+              : '';
+          final String location =
+              <String>[city, country].where((String item) => item.isNotEmpty).join('، ');
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -195,6 +234,24 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const Divider(height: 22),
                     _ProfileInfoRow(
+                      icon: Icons.cake_outlined,
+                      label: 'العمر',
+                      value: age == null ? 'لم تحدد بعد' : '$age سنة',
+                    ),
+                    const Divider(height: 22),
+                    _ProfileInfoRow(
+                      icon: Icons.person_pin_outlined,
+                      label: 'الجنس',
+                      value: gender,
+                    ),
+                    const Divider(height: 22),
+                    _ProfileInfoRow(
+                      icon: Icons.location_on_outlined,
+                      label: 'مكان السكن',
+                      value: location.isEmpty ? 'لم تحدد بعد' : location,
+                    ),
+                    const Divider(height: 22),
+                    _ProfileInfoRow(
                       icon: Icons.flag_outlined,
                       label: 'الهدف الأساسي',
                       value: profile['primaryGoal'] is String &&
@@ -226,6 +283,37 @@ class _ProfilePageState extends State<ProfilePage> {
                             )
                             .toList(growable: false),
                       ),
+              ),
+              const SizedBox(height: 16),
+              _ProfileSection(
+                title: 'تفضيلات رحلتك',
+                child: Column(
+                  children: <Widget>[
+                    _ProfileInfoRow(
+                      icon: Icons.menu_book_outlined,
+                      label: 'نوع المحتوى المفضل',
+                      value: _contentStyleLabel(
+                        profile['preferredContentStyle'] as String?,
+                      ),
+                    ),
+                    const Divider(height: 22),
+                    _ProfileInfoRow(
+                      icon: Icons.schedule_outlined,
+                      label: 'وقتك اليومي',
+                      value: profile['dailyTimeMinutes'] is int
+                          ? 'undefined دقيقة'
+                          : 'لم تحدد بعد',
+                    ),
+                    const Divider(height: 22),
+                    _ProfileInfoRow(
+                      icon: Icons.wb_twilight_outlined,
+                      label: 'الوقت المفضل',
+                      value: _preferredTimeLabel(
+                        profile['preferredTime'] as String?,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               FilledButton.icon(
@@ -353,11 +441,25 @@ class _ProfileEditResult {
     required this.displayName,
     required this.interests,
     required this.primaryGoal,
+    this.age,
+    this.gender,
+    this.city,
+    this.country,
+    this.preferredContentStyle,
+    this.dailyTimeMinutes,
+    this.preferredTime,
   });
 
   final String displayName;
   final List<String> interests;
   final String primaryGoal;
+  final int? age;
+  final String? gender;
+  final String? city;
+  final String? country;
+  final String? preferredContentStyle;
+  final int? dailyTimeMinutes;
+  final String? preferredTime;
 }
 
 class _ProfileEditDialog extends StatefulWidget {
@@ -365,11 +467,25 @@ class _ProfileEditDialog extends StatefulWidget {
     required this.initialName,
     required this.initialInterests,
     required this.initialGoal,
+    required this.initialAge,
+    required this.initialGender,
+    required this.initialCity,
+    required this.initialCountry,
+    required this.initialContentStyle,
+    required this.initialDailyMinutes,
+    required this.initialPreferredTime,
   });
 
   final String initialName;
   final List<String> initialInterests;
   final String initialGoal;
+  final int? initialAge;
+  final String? initialGender;
+  final String initialCity;
+  final String initialCountry;
+  final String? initialContentStyle;
+  final int? initialDailyMinutes;
+  final String? initialPreferredTime;
 
   @override
   State<_ProfileEditDialog> createState() => _ProfileEditDialogState();
@@ -395,27 +511,49 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
 
   late final TextEditingController _nameController =
       TextEditingController(text: widget.initialName);
+  late final TextEditingController _ageController =
+      TextEditingController(text: widget.initialAge?.toString() ?? '');
+  late final TextEditingController _cityController =
+      TextEditingController(text: widget.initialCity);
+  late final TextEditingController _countryController =
+      TextEditingController(text: widget.initialCountry);
   late final Set<String> _selectedInterests =
       widget.initialInterests.toSet();
-  String? _selectedGoal = widget.initialGoal.isEmpty
-      ? null
-      : widget.initialGoal;
+  String? _selectedGoal =
+      widget.initialGoal.isEmpty ? null : widget.initialGoal;
+  String? _selectedGender = widget.initialGender;
+  String? _preferredContentStyle = widget.initialContentStyle;
+  int? _dailyTimeMinutes = widget.initialDailyMinutes;
+  String? _preferredTime = widget.initialPreferredTime;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _ageController.dispose();
+    _cityController.dispose();
+    _countryController.dispose();
     super.dispose();
   }
 
   void _save() {
     final String name = _nameController.text.trim();
     if (name.isEmpty || name.length > 100) return;
+    final String ageText = _ageController.text.trim();
+    final int? age = ageText.isEmpty ? null : int.tryParse(ageText);
+    if (ageText.isNotEmpty && (age == null || age < 13 || age > 120)) return;
 
     Navigator.of(context).pop(
       _ProfileEditResult(
         displayName: name,
         interests: _selectedInterests.toList(growable: false),
         primaryGoal: _selectedGoal ?? '',
+        age: age,
+        gender: _selectedGender,
+        city: _cityController.text.trim(),
+        country: _countryController.text.trim(),
+        preferredContentStyle: _preferredContentStyle,
+        dailyTimeMinutes: _dailyTimeMinutes,
+        preferredTime: _preferredTime,
       ),
     );
   }
@@ -436,6 +574,54 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                 maxLength: 100,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'الاسم'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _ageController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'العمر',
+                        prefixIcon: Icon(Icons.cake_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedGender,
+                      decoration: const InputDecoration(labelText: 'الجنس'),
+                      items: const <DropdownMenuItem<String>>[
+                        DropdownMenuItem(value: 'male', child: Text('ذكر')),
+                        DropdownMenuItem(value: 'female', child: Text('أنثى')),
+                        DropdownMenuItem(
+                          value: 'prefer_not_to_say',
+                          child: Text('أفضل عدم الإجابة'),
+                        ),
+                      ],
+                      onChanged: (String? value) =>
+                          setState(() => _selectedGender = value),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _cityController,
+                decoration: const InputDecoration(
+                  labelText: 'المدينة',
+                  prefixIcon: Icon(Icons.location_city_outlined),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _countryController,
+                decoration: const InputDecoration(
+                  labelText: 'الدولة',
+                  prefixIcon: Icon(Icons.public_outlined),
+                ),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -483,6 +669,81 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                   );
                 }).toList(growable: false),
               ),
+              const SizedBox(height: 18),
+              const Text(
+                'تفضيلاتك',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              const Text('أي نوع من المحتوى تفضّل؟'),
+              Wrap(
+                spacing: 8,
+                children: <Widget>[
+                  ChoiceChip(
+                    label: const Text('محتوى قصير'),
+                    selected: _preferredContentStyle == 'short',
+                    onSelected: (value) => setState(
+                      () => _preferredContentStyle = value ? 'short' : null,
+                    ),
+                  ),
+                  ChoiceChip(
+                    label: const Text('جلسات متعمقة'),
+                    selected: _preferredContentStyle == 'deep',
+                    onSelected: (value) => setState(
+                      () => _preferredContentStyle = value ? 'deep' : null,
+                    ),
+                  ),
+                  ChoiceChip(
+                    label: const Text('مزيج بينهما'),
+                    selected: _preferredContentStyle == 'mixed',
+                    onSelected: (value) => setState(
+                      () => _preferredContentStyle = value ? 'mixed' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text('كم دقيقة تخصص لنفسك يومياً؟'),
+              Wrap(
+                spacing: 8,
+                children: <int>[5, 10, 15, 20, 30, 45, 60]
+                    .map((minutes) => ChoiceChip(
+                          label: Text('$minutes دقيقة'),
+                          selected: _dailyTimeMinutes == minutes,
+                          onSelected: (value) => setState(
+                            () => _dailyTimeMinutes = value ? minutes : null,
+                          ),
+                        ))
+                    .toList(growable: false),
+              ),
+              const SizedBox(height: 12),
+              const Text('متى يناسبك وقت رُوح؟'),
+              Wrap(
+                spacing: 8,
+                children: <Widget>[
+                  ChoiceChip(
+                    label: const Text('الصباح'),
+                    selected: _preferredTime == 'morning',
+                    onSelected: (value) => setState(
+                      () => _preferredTime = value ? 'morning' : null,
+                    ),
+                  ),
+                  ChoiceChip(
+                    label: const Text('المساء'),
+                    selected: _preferredTime == 'evening',
+                    onSelected: (value) => setState(
+                      () => _preferredTime = value ? 'evening' : null,
+                    ),
+                  ),
+                  ChoiceChip(
+                    label: const Text('حسب يومي'),
+                    selected: _preferredTime == 'flexible',
+                    onSelected: (value) => setState(
+                      () => _preferredTime = value ? 'flexible' : null,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -498,5 +759,45 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
         ),
       ],
     );
+  }
+}
+
+
+String _genderLabel(String? value) {
+  switch (value) {
+    case 'male':
+      return 'ذكر';
+    case 'female':
+      return 'أنثى';
+    case 'prefer_not_to_say':
+      return 'أفضل عدم الإجابة';
+    default:
+      return 'لم تحدد بعد';
+  }
+}
+
+String _contentStyleLabel(String? value) {
+  switch (value) {
+    case 'short':
+      return 'محتوى قصير';
+    case 'deep':
+      return 'جلسات متعمقة';
+    case 'mixed':
+      return 'مزيج بينهما';
+    default:
+      return 'لم تحدد بعد';
+  }
+}
+
+String _preferredTimeLabel(String? value) {
+  switch (value) {
+    case 'morning':
+      return 'الصباح';
+    case 'evening':
+      return 'المساء';
+    case 'flexible':
+      return 'حسب اليوم';
+    default:
+      return 'لم تحدد بعد';
   }
 }
