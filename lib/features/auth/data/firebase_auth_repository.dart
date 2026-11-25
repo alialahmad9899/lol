@@ -12,8 +12,6 @@ class FirebaseAuthRepository {
   final FirebaseAuth _auth;
   final FirestoreProfileRepository _profiles;
 
-  // userChanges also emits after reload(), so email verification takes effect
-  // without requiring the user to sign out and sign in again.
   Stream<User?> get authStateChanges => _auth.userChanges();
 
   User? get currentUser => _auth.currentUser;
@@ -36,7 +34,7 @@ class FirebaseAuthRepository {
       interests: interests,
       primaryGoal: primaryGoal,
     );
-    await credential.user?.sendEmailVerification();
+    // Email confirmation is not required for entry in release one.
     return credential;
   }
 
@@ -54,21 +52,6 @@ class FirebaseAuthRepository {
 
   Future<void> sendPasswordResetEmail({required String email}) {
     return _auth.sendPasswordResetEmail(email: email.trim());
-  }
-
-  Future<void> sendEmailVerification() async {
-    final User? user = _auth.currentUser;
-    if (user == null) {
-      throw StateError('لا يوجد مستخدم مسجّل لإرسال رسالة التحقق.');
-    }
-    await user.sendEmailVerification();
-  }
-
-  Future<User?> reloadCurrentUser() async {
-    final User? user = _auth.currentUser;
-    if (user == null) return null;
-    await user.reload();
-    return _auth.currentUser;
   }
 
   Future<void> signOut() => _auth.signOut();
@@ -89,8 +72,6 @@ class FirebaseAuthRepository {
         primaryGoal: primaryGoal,
       );
     } catch (error, stackTrace) {
-      // Do not leave a partially signed-in session when its profile could not
-      // be read or created. The user can retry after the data service is fixed.
       try {
         await _auth.signOut();
       } catch (_) {
