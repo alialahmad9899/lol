@@ -118,7 +118,10 @@ test('only an existing administrator can access admin-managed collections', asyn
   const regularUser = signedIn('alice');
 
   await seed('admins/admin', { createdBy: 'owner' });
+  await seed('users/alice', profileData('alice'));
 
+  await assertSucceeds(getDocs(collection(admin, 'users')));
+  await assertFails(getDocs(collection(regularUser, 'users')));
   await assertSucceeds(getDoc(doc(admin, 'admins/admin')));
   await assertFails(getDoc(doc(regularUser, 'admins/admin')));
   await assertFails(setDoc(doc(regularUser, 'admins/alice'), {}));
