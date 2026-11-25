@@ -57,6 +57,13 @@ function profileData(uid, email = uid + '@example.com') {
     locale: 'ar',
     interests: ['وعي'],
     primaryGoal: 'فهم نفسي',
+    age: 29,
+    gender: 'prefer_not_to_say',
+    city: 'روتردام',
+    country: 'هولندا',
+    preferredContentStyle: 'mixed',
+    dailyTimeMinutes: 15,
+    preferredTime: 'flexible',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     schemaVersion: 1,
@@ -108,6 +115,9 @@ test('users can read only their own profile and cannot elevate privileges', asyn
     updateDoc(doc(alice, 'users/alice'), {
       displayName: 'علي',
       primaryGoal: 'تنمية الوعي',
+      age: 34,
+      city: 'أمستردام',
+      preferredTime: 'evening',
       updatedAt: serverTimestamp(),
     }),
   );
@@ -222,6 +232,7 @@ test('free courses permit self-enrollment while paid lessons require active acce
       ...enrollmentData('alice', 'paid-course'),
     }),
   );
+  await assertFails(getDoc(doc(alice, 'courses/paid-course')));
   await assertFails(
     getDoc(doc(alice, 'courses/paid-course/lessons/lesson-1')),
   );
@@ -230,7 +241,7 @@ test('free courses permit self-enrollment while paid lessons require active acce
     'users/alice/enrollments/paid-course',
     enrollmentData('alice', 'paid-course'),
   );
-  await assertSucceeds(
+  await assertFails(
     getDoc(doc(alice, 'courses/paid-course/lessons/lesson-1')),
   );
   await assertFails(
@@ -275,6 +286,7 @@ test('program days remain locked until the user enrolls in a free published prog
   await assertSucceeds(
     getDoc(doc(alice, 'programs/free-challenge/days/day-1')),
   );
+  await assertFails(getDoc(doc(alice, 'programs/paid-challenge')));
   await assertFails(
     setDoc(doc(alice, 'users/alice/programEnrollments/paid-challenge'), {
       userId: 'alice',
@@ -288,77 +300,20 @@ test('program days remain locked until the user enrolls in a free published prog
   );
 });
 
-test('manual paid-course requests are validated and admin approval grants access atomically', async () => {
+test('manual payment requests remain disabled in the free first release', async () => {
   const alice = signedIn('alice');
-  const bob = signedIn('bob');
-  const admin = signedIn('admin');
-
-  await seed('admins/admin', { createdBy: 'owner' });
-  await seed('courses/paid-course', {
-    title: 'الكورس المتقدم',
-    status: 'published',
-    isFree: false,
-    price: 40,
-    currency: 'USD',
-  });
-  await seed('courses/paid-course/lessons/lesson-1', {
-    title: 'الدرس الأول',
-    body: 'محتوى الكورس المدفوع',
-  });
-
-  const validRequest = {
-    userId: 'alice',
-    courseId: 'paid-course',
-    courseTitle: 'الكورس المتقدم',
-    amount: 40,
-    currency: 'USD',
-    transferReference: 'SC-2026-1125',
-    status: 'pending',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-
-  await assertSucceeds(
-    setDoc(doc(alice, 'paymentRequests/request-1'), validRequest),
-  );
   await assertFails(
-    getDoc(doc(bob, 'paymentRequests/request-1')),
-  );
-  await assertFails(
-    updateDoc(doc(alice, 'paymentRequests/request-1'), {
-      status: 'approved',
+    setDoc(doc(alice, 'paymentRequests/request-1'), {
+      userId: 'alice',
+      courseId: 'paid-course',
+      courseTitle: 'كورس مؤجل',
+      amount: 40,
+      currency: 'USD',
+      transferReference: 'SC-2026-1125',
+      status: 'pending',
+      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }),
   );
-  await assertFails(
-    setDoc(doc(alice, 'paymentRequests/request-wrong-amount'), {
-      ...validRequest,
-      amount: 1,
-    }),
-  );
-
-  const pendingForOwner = query(
-    collection(alice, 'paymentRequests'),
-    where('userId', '==', 'alice'),
-  );
-  await assertSucceeds(getDocs(pendingForOwner));
   await assertFails(getDocs(collection(alice, 'paymentRequests')));
-
-  const batch = writeBatch(admin);
-  batch.set(
-    doc(admin, 'users/alice/enrollments/paid-course'),
-    enrollmentData('alice', 'paid-course'),
-  );
-  batch.update(doc(admin, 'paymentRequests/request-1'), {
-    status: 'approved',
-    reviewNote: 'تم التحقق من التحويل',
-    reviewedBy: 'admin',
-    reviewedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  await assertSucceeds(batch.commit());
-  await assertSucceeds(
-    getDoc(doc(alice, 'courses/paid-course/lessons/lesson-1')),
-  );
 });

@@ -22,6 +22,13 @@ class FirebaseAuthRepository {
     required String displayName,
     List<String> interests = const <String>[],
     String primaryGoal = '',
+    int? age,
+    String? gender,
+    String? city,
+    String? country,
+    String? preferredContentStyle,
+    int? dailyTimeMinutes,
+    String? preferredTime,
   }) async {
     final UserCredential credential =
         await _auth.createUserWithEmailAndPassword(
@@ -33,6 +40,13 @@ class FirebaseAuthRepository {
       displayName: displayName,
       interests: interests,
       primaryGoal: primaryGoal,
+      age: age,
+      gender: gender,
+      city: city,
+      country: country,
+      preferredContentStyle: preferredContentStyle,
+      dailyTimeMinutes: dailyTimeMinutes,
+      preferredTime: preferredTime,
     );
     // Email confirmation is not required for entry in release one.
     return credential;
@@ -61,6 +75,13 @@ class FirebaseAuthRepository {
     String? displayName,
     List<String> interests = const <String>[],
     String primaryGoal = '',
+    int? age,
+    String? gender,
+    String? city,
+    String? country,
+    String? preferredContentStyle,
+    int? dailyTimeMinutes,
+    String? preferredTime,
   }) async {
     if (user == null) return;
 
@@ -70,6 +91,13 @@ class FirebaseAuthRepository {
         displayName: displayName,
         interests: interests,
         primaryGoal: primaryGoal,
+        age: age,
+        gender: gender,
+        city: city,
+        country: country,
+        preferredContentStyle: preferredContentStyle,
+        dailyTimeMinutes: dailyTimeMinutes,
+        preferredTime: preferredTime,
       );
     } catch (error, stackTrace) {
       try {

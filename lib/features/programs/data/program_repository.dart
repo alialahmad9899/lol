@@ -99,10 +99,13 @@ class ProgramRepository {
   Stream<List<RoohProgram>> watchPublishedPrograms() {
     return _programs
         .where('status', isEqualTo: 'published')
+        .where('isFree', isEqualTo: true)
+        .where('price', isEqualTo: 0)
         .snapshots()
         .map((QuerySnapshot<Map<String, dynamic>> snapshot) {
       final List<RoohProgram> programs = snapshot.docs
           .map(RoohProgram.fromSnapshot)
+          .where((RoohProgram program) => program.canEnrollForFree)
           .toList(growable: true);
       programs.sort(
         (RoohProgram first, RoohProgram second) =>

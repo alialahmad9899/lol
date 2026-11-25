@@ -108,10 +108,13 @@ class CourseRepository {
   Stream<List<Course>> watchPublishedCourses() {
     return _courses
         .where('status', isEqualTo: 'published')
+        .where('isFree', isEqualTo: true)
+        .where('price', isEqualTo: 0)
         .snapshots()
         .map((QuerySnapshot<Map<String, dynamic>> snapshot) {
       final List<Course> courses = snapshot.docs
           .map(Course.fromSnapshot)
+          .where((Course course) => course.canEnrollForFree)
           .toList(growable: true);
       courses.sort(
         (Course first, Course second) =>

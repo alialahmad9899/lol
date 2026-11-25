@@ -16,6 +16,23 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    function validOptionalProfileFields(data) {
+      return (!('age' in data.keys())
+          || (data.age is int && data.age >= 13 && data.age <= 120))
+        && (!('gender' in data.keys())
+          || data.gender in ['male', 'female', 'prefer_not_to_say'])
+        && (!('city' in data.keys())
+          || (data.city is string && data.city.size() <= 80))
+        && (!('country' in data.keys())
+          || (data.country is string && data.country.size() <= 80))
+        && (!('preferredContentStyle' in data.keys())
+          || data.preferredContentStyle in ['short', 'deep', 'mixed'])
+        && (!('dailyTimeMinutes' in data.keys())
+          || data.dailyTimeMinutes in [5, 10, 15, 20, 30, 45, 60])
+        && (!('preferredTime' in data.keys())
+          || data.preferredTime in ['morning', 'evening', 'flexible']);
+    }
+
     function validProfileFields(data) {
       return data.keys().hasOnly([
           'uid',
@@ -26,7 +43,14 @@ service cloud.firestore {
           'primaryGoal',
           'createdAt',
           'updatedAt',
-          'schemaVersion'
+          'schemaVersion',
+          'age',
+          'gender',
+          'city',
+          'country',
+          'preferredContentStyle',
+          'dailyTimeMinutes',
+          'preferredTime'
         ])
         && data.keys().hasAll([
           'uid',
@@ -47,7 +71,8 @@ service cloud.firestore {
         && data.interests.size() <= 20
         && (!('primaryGoal' in data.keys())
           || (data.primaryGoal is string && data.primaryGoal.size() <= 120))
-        && data.schemaVersion == 1;
+        && data.schemaVersion == 1
+        && validOptionalProfileFields(data);
     }
 
     match /admins/{adminUid} {
@@ -71,7 +96,14 @@ service cloud.firestore {
           'locale',
           'interests',
           'primaryGoal',
-          'updatedAt'
+          'updatedAt',
+          'age',
+          'gender',
+          'city',
+          'country',
+          'preferredContentStyle',
+          'dailyTimeMinutes',
+          'preferredTime'
         ])
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
@@ -85,7 +117,8 @@ service cloud.firestore {
         && (!('primaryGoal' in request.resource.data.keys())
           || (request.resource.data.primaryGoal is string
             && request.resource.data.primaryGoal.size() <= 120))
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.updatedAt == request.time
+        && validOptionalProfileFields(request.resource.data);
 
       allow delete: if false;
 
@@ -163,15 +196,6 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/courses/$(courseId)).data.price == 0;
     }
 
-    function hasActiveCourseEnrollment(userId, courseId) {
-      return exists(
-          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
-        )
-        && get(
-          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
-        ).data.status == 'active';
-    }
-
     function isProgramPublished(programId) {
       return exists(/databases/$(database)/documents/programs/$(programId))
         && get(/databases/$(database)/documents/programs/$(programId)).data.status == 'published';
@@ -193,96 +217,24 @@ service cloud.firestore {
     }
 
     match /paymentRequests/{requestId} {
-      allow get, list: if isAdmin()
-        || (isSignedIn() && resource.data.userId == request.auth.uid);
-
-      allow create: if request.resource.data.keys().hasOnly([
-          'userId',
-          'courseId',
-          'courseTitle',
-          'amount',
-          'currency',
-          'transferReference',
-          'status',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.keys().hasAll([
-          'userId',
-          'courseId',
-          'courseTitle',
-          'amount',
-          'currency',
-          'transferReference',
-          'status',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.userId is string
-        && request.resource.data.courseId is string
-        && isOwner(request.resource.data.userId)
-        && !hasActiveCourseEnrollment(
-          request.resource.data.userId,
-          request.resource.data.courseId
-        )
-        && exists(/databases/$(database)/documents/courses/$(request.resource.data.courseId))
-        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.status == 'published'
-        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.isFree == false
-        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.price is number
-        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.price > 0
-        && request.resource.data.amount is number
-        && request.resource.data.amount == get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.price
-        && request.resource.data.currency == get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.currency
-        && request.resource.data.courseTitle == get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.title
-        && request.resource.data.transferReference is string
-        && request.resource.data.transferReference.size() >= 4
-        && request.resource.data.transferReference.size() <= 120
-        && request.resource.data.status == 'pending'
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-
-      allow update: if isAdmin()
-        && resource.data.status == 'pending'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status',
-          'reviewNote',
-          'reviewedBy',
-          'reviewedAt',
-          'updatedAt'
-        ])
-        && request.resource.data.userId == resource.data.userId
-        && request.resource.data.courseId == resource.data.courseId
-        && request.resource.data.courseTitle == resource.data.courseTitle
-        && request.resource.data.amount == resource.data.amount
-        && request.resource.data.currency == resource.data.currency
-        && request.resource.data.transferReference == resource.data.transferReference
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.status in ['approved', 'rejected']
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt == request.time
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.reviewNote is string
-        && request.resource.data.reviewNote.size() <= 500
-        && (
-          request.resource.data.status == 'rejected'
-          || (
-            existsAfter(/databases/$(database)/documents/users/$(resource.data.userId)/enrollments/$(resource.data.courseId))
-            && getAfter(/databases/$(database)/documents/users/$(resource.data.userId)/enrollments/$(resource.data.courseId)).data.status == 'active'
-          )
-        );
-
-      allow delete: if false;
+      // Manual payments are disabled in the free first release.
+      allow read, write: if false;
     }
 
     match /programs/{programId} {
-      allow get, list: if isAdmin() || resource.data.status == 'published';
+      allow get, list: if isAdmin()
+        || (
+          resource.data.status == 'published'
+          && resource.data.isFree == true
+          && resource.data.price == 0
+        );
       allow create, update, delete: if isAdmin();
 
       match /days/{dayId} {
         allow get, list: if isAdmin()
           || (
             isSignedIn()
-            && isProgramPublished(programId)
+            && isFreeProgram(programId)
             && hasActiveProgramEnrollment(request.auth.uid, programId)
           );
         allow create, update, delete: if isAdmin();
@@ -350,15 +302,25 @@ service cloud.firestore {
 
     match /courses/{courseId} {
       // Published course metadata can be viewed; lesson content is protected below.
-      allow get, list: if isAdmin() || resource.data.status == 'published';
+      allow get, list: if isAdmin()
+        || (
+          resource.data.status == 'published'
+          && resource.data.isFree == true
+          && resource.data.price == 0
+        );
       allow create, update, delete: if isAdmin();
 
       match /lessons/{lessonId} {
         allow get, list: if isAdmin()
           || (
             isSignedIn()
-            && isCoursePublished(courseId)
-            && hasActiveCourseEnrollment(request.auth.uid, courseId)
+            && isFreeCourse(courseId)
+            && exists(
+              /databases/$(database)/documents/users/$(request.auth.uid)/enrollments/$(courseId)
+            )
+            && get(
+              /databases/$(database)/documents/users/$(request.auth.uid)/enrollments/$(courseId)
+            ).data.status == 'active'
           );
         allow create, update, delete: if isAdmin();
       }

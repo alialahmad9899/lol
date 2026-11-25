@@ -15,6 +15,13 @@ class FirestoreProfileRepository {
     String? displayName,
     List<String> interests = const <String>[],
     String? primaryGoal,
+    int? age,
+    String? gender,
+    String? city,
+    String? country,
+    String? preferredContentStyle,
+    int? dailyTimeMinutes,
+    String? preferredTime,
   }) async {
     final String? email = user.email;
     if (email == null || email.isEmpty) {
@@ -52,6 +59,15 @@ class FirestoreProfileRepository {
         'يجب ألا يتجاوز الهدف 120 محرفاً.',
       );
     }
+    _validateOptionalProfileFields(
+      age: age,
+      gender: gender,
+      city: city,
+      country: country,
+      preferredContentStyle: preferredContentStyle,
+      dailyTimeMinutes: dailyTimeMinutes,
+      preferredTime: preferredTime,
+    );
 
     final DocumentReference<Map<String, dynamic>> userDocument =
         _users.doc(user.uid);
@@ -61,7 +77,7 @@ class FirestoreProfileRepository {
     // Never overwrite an existing profile when the user signs in.
     if (snapshot.exists) return;
 
-    await userDocument.set(<String, Object>{
+    final Map<String, dynamic> profileData = <String, dynamic>{
       'uid': user.uid,
       'email': email,
       'displayName': safeDisplayName,
@@ -71,7 +87,18 @@ class FirestoreProfileRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'schemaVersion': 1,
-    });
+    };
+    _addOptionalProfileFields(
+      profileData,
+      age: age,
+      gender: gender,
+      city: city,
+      country: country,
+      preferredContentStyle: preferredContentStyle,
+      dailyTimeMinutes: dailyTimeMinutes,
+      preferredTime: preferredTime,
+    );
+    await userDocument.set(profileData);
   }
 
   Future<Map<String, dynamic>?> fetchProfile(String uid) async {
@@ -93,6 +120,13 @@ class FirestoreProfileRepository {
     String? locale,
     List<String>? interests,
     String? primaryGoal,
+    int? age,
+    String? gender,
+    String? city,
+    String? country,
+    String? preferredContentStyle,
+    int? dailyTimeMinutes,
+    String? preferredTime,
   }) async {
     final Map<String, Object> changes = <String, Object>{};
 
@@ -142,9 +176,89 @@ class FirestoreProfileRepository {
       changes['primaryGoal'] = normalizedGoal;
     }
 
+    _validateOptionalProfileFields(
+      age: age,
+      gender: gender,
+      city: city,
+      country: country,
+      preferredContentStyle: preferredContentStyle,
+      dailyTimeMinutes: dailyTimeMinutes,
+      preferredTime: preferredTime,
+    );
+    final Map<String, dynamic> optionalChanges = <String, dynamic>{};
+    _addOptionalProfileFields(
+      optionalChanges,
+      age: age,
+      gender: gender,
+      city: city,
+      country: country,
+      preferredContentStyle: preferredContentStyle,
+      dailyTimeMinutes: dailyTimeMinutes,
+      preferredTime: preferredTime,
+    );
+    changes.addAll(optionalChanges.cast<String, Object>());
+
     if (changes.isEmpty) return;
 
     changes['updatedAt'] = FieldValue.serverTimestamp();
     await _users.doc(user.uid).update(changes);
   }
+}
+
+
+void _validateOptionalProfileFields({
+  int? age,
+  String? gender,
+  String? city,
+  String? country,
+  String? preferredContentStyle,
+  int? dailyTimeMinutes,
+  String? preferredTime,
+}) {
+  if (age != null && (age < 13 || age > 120)) {
+    throw ArgumentError.value(age, 'age', 'أدخل عمراً بين 13 و120 سنة.');
+  }
+  if (gender != null &&
+      !<String>{'male', 'female', 'prefer_not_to_say'}.contains(gender)) {
+    throw ArgumentError.value(gender, 'gender');
+  }
+  if (city != null && city.trim().length > 80) {
+    throw ArgumentError.value(city, 'city', 'المدينة طويلة جداً.');
+  }
+  if (country != null && country.trim().length > 80) {
+    throw ArgumentError.value(country, 'country', 'اسم الدولة طويل جداً.');
+  }
+  if (preferredContentStyle != null &&
+      !<String>{'short', 'deep', 'mixed'}.contains(preferredContentStyle)) {
+    throw ArgumentError.value(preferredContentStyle, 'preferredContentStyle');
+  }
+  if (dailyTimeMinutes != null &&
+      !<int>{5, 10, 15, 20, 30, 45, 60}.contains(dailyTimeMinutes)) {
+    throw ArgumentError.value(dailyTimeMinutes, 'dailyTimeMinutes');
+  }
+  if (preferredTime != null &&
+      !<String>{'morning', 'evening', 'flexible'}.contains(preferredTime)) {
+    throw ArgumentError.value(preferredTime, 'preferredTime');
+  }
+}
+
+void _addOptionalProfileFields(
+  Map<String, dynamic> target, {
+  int? age,
+  String? gender,
+  String? city,
+  String? country,
+  String? preferredContentStyle,
+  int? dailyTimeMinutes,
+  String? preferredTime,
+}) {
+  if (age != null) target['age'] = age;
+  if (gender != null) target['gender'] = gender;
+  if (city != null) target['city'] = city.trim();
+  if (country != null) target['country'] = country.trim();
+  if (preferredContentStyle != null) {
+    target['preferredContentStyle'] = preferredContentStyle;
+  }
+  if (dailyTimeMinutes != null) target['dailyTimeMinutes'] = dailyTimeMinutes;
+  if (preferredTime != null) target['preferredTime'] = preferredTime;
 }

@@ -20,6 +20,9 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
   static const List<String> _interestOptions = <String>[
     'وعي',
     'تطوير الذات',
@@ -38,6 +41,10 @@ class _AuthPageState extends State<AuthPage> {
   ];
   final Set<String> _selectedInterests = <String>{};
   String? _selectedGoal;
+  String? _selectedGender;
+  String? _preferredContentStyle;
+  int? _dailyTimeMinutes;
+  String? _preferredTime;
 
   bool _isCreatingAccount = false;
   bool _isBusy = false;
@@ -50,6 +57,9 @@ class _AuthPageState extends State<AuthPage> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _ageController.dispose();
+    _cityController.dispose();
+    _countryController.dispose();
     super.dispose();
   }
 
@@ -77,6 +87,19 @@ class _AuthPageState extends State<AuthPage> {
           displayName: _nameController.text.trim(),
           interests: _selectedInterests.toList(growable: false),
           primaryGoal: _selectedGoal!,
+          age: _ageController.text.trim().isEmpty
+              ? null
+              : int.parse(_ageController.text.trim()),
+          gender: _selectedGender,
+          city: _cityController.text.trim().isEmpty
+              ? null
+              : _cityController.text.trim(),
+          country: _countryController.text.trim().isEmpty
+              ? null
+              : _countryController.text.trim(),
+          preferredContentStyle: _preferredContentStyle,
+          dailyTimeMinutes: _dailyTimeMinutes,
+          preferredTime: _preferredTime,
         );
       } else {
         await widget.repository.signIn(
@@ -228,6 +251,167 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                         validator: (String? value) =>
                             AuthInputValidator.validateDisplayName(value ?? ''),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextFormField(
+                              controller: _ageController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'العمر (اختياري)',
+                                prefixIcon: Icon(Icons.cake_outlined),
+                              ),
+                              validator: (String? value) {
+                                final String text = (value ?? '').trim();
+                                if (text.isEmpty) return null;
+                                final int? age = int.tryParse(text);
+                                if (age == null || age < 13 || age > 120) {
+                                  return 'أدخل عمراً بين 13 و120';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _selectedGender,
+                              decoration: const InputDecoration(
+                                labelText: 'الجنس (اختياري)',
+                              ),
+                              items: const <DropdownMenuItem<String>>[
+                                DropdownMenuItem(value: 'male', child: Text('ذكر')),
+                                DropdownMenuItem(value: 'female', child: Text('أنثى')),
+                                DropdownMenuItem(
+                                  value: 'prefer_not_to_say',
+                                  child: Text('أفضل عدم الإجابة'),
+                                ),
+                              ],
+                              onChanged: (String? value) =>
+                                  setState(() => _selectedGender = value),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextFormField(
+                              controller: _cityController,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'المدينة (اختياري)',
+                                prefixIcon: Icon(Icons.location_city_outlined),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _countryController,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'الدولة (اختياري)',
+                                prefixIcon: Icon(Icons.public_outlined),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text(
+                          'أسئلة بسيطة لتجربة تناسبك',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: const Text('اختيارية ويمكنك تخطيها'),
+                        children: <Widget>[
+                          const Align(
+                            alignment: Alignment.centerRight,
+                            child: Text('أي نوع من المحتوى تفضّل؟'),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: <Widget>[
+                              ChoiceChip(
+                                label: const Text('محتوى قصير'),
+                                selected: _preferredContentStyle == 'short',
+                                onSelected: (selected) => setState(
+                                  () => _preferredContentStyle = selected ? 'short' : null,
+                                ),
+                              ),
+                              ChoiceChip(
+                                label: const Text('جلسات متعمقة'),
+                                selected: _preferredContentStyle == 'deep',
+                                onSelected: (selected) => setState(
+                                  () => _preferredContentStyle = selected ? 'deep' : null,
+                                ),
+                              ),
+                              ChoiceChip(
+                                label: const Text('مزيج بينهما'),
+                                selected: _preferredContentStyle == 'mixed',
+                                onSelected: (selected) => setState(
+                                  () => _preferredContentStyle = selected ? 'mixed' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Align(
+                            alignment: Alignment.centerRight,
+                            child: Text('كم دقيقة تستطيع تخصيصها لنفسك يومياً؟'),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: <int>[5, 10, 15, 20, 30, 45, 60]
+                                .map((minutes) => ChoiceChip(
+                                      label: Text('$minutes دقيقة'),
+                                      selected: _dailyTimeMinutes == minutes,
+                                      onSelected: (selected) => setState(
+                                        () => _dailyTimeMinutes = selected ? minutes : null,
+                                      ),
+                                    ))
+                                .toList(growable: false),
+                          ),
+                          const SizedBox(height: 12),
+                          const Align(
+                            alignment: Alignment.centerRight,
+                            child: Text('متى تفضّل تخصيص وقت لرُوح؟'),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: <Widget>[
+                              ChoiceChip(
+                                label: const Text('الصباح'),
+                                selected: _preferredTime == 'morning',
+                                onSelected: (selected) => setState(
+                                  () => _preferredTime = selected ? 'morning' : null,
+                                ),
+                              ),
+                              ChoiceChip(
+                                label: const Text('المساء'),
+                                selected: _preferredTime == 'evening',
+                                onSelected: (selected) => setState(
+                                  () => _preferredTime = selected ? 'evening' : null,
+                                ),
+                              ),
+                              ChoiceChip(
+                                label: const Text('حسب يومي'),
+                                selected: _preferredTime == 'flexible',
+                                onSelected: (selected) => setState(
+                                  () => _preferredTime = selected ? 'flexible' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 14),
                       const Text(
