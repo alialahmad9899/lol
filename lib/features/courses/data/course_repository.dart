@@ -50,7 +50,7 @@ class Course {
           : null,
       price: price,
       currency: _stringValue(data['currency'], fallback: 'USD'),
-      isFree: data['isFree'] == true && price <= 0,
+      isFree: data['isFree'] == true && price == 0,
       sortOrder: data['sortOrder'] is int ? data['sortOrder'] as int : 0,
     );
   }
@@ -185,7 +185,10 @@ class CourseRepository {
 
       final DocumentSnapshot<Map<String, dynamic>> existingEnrollment =
           await transaction.get(enrollmentReference);
-      if (existingEnrollment.exists) return;
+      if (existingEnrollment.exists) {
+        if (existingEnrollment.data()?['status'] == 'active') return;
+        throw StateError('هذا التسجيل موقوف ويحتاج إلى مراجعة الإدارة.');
+      }
 
       transaction.set(enrollmentReference, <String, Object>{
         'userId': userId,
