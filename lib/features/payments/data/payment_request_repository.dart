@@ -112,6 +112,17 @@ class PaymentRequestRepository {
       throw StateError('لا يمكن إرسال طلب دفع لدورة مجانية.');
     }
 
+    final DocumentSnapshot<Map<String, dynamic>> existingEnrollment =
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('enrollments')
+            .doc(courseId)
+            .get();
+    if (existingEnrollment.data()?['status'] == 'active') {
+      throw StateError('أنت مسجل بالفعل في هذا الكورس.');
+    }
+
     final QuerySnapshot<Map<String, dynamic>> existingRequests =
         await _requests.where('userId', isEqualTo: userId).get();
     final bool alreadyPending = existingRequests.docs.any(
