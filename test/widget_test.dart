@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:rooh_app/app.dart';
+import 'package:rooh_app/features/home/presentation/home_page.dart';
 
 void main() {
   testWidgets('the Arabic home screen shows the Rooh identity', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const RoohApp());
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
     await tester.pumpAndSettle();
 
     expect(find.text('رُوح'), findsOneWidget);
