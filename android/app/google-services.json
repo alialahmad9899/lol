@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "289917698507",
+    "project_id": "ali9899-59774",
+    "storage_bucket": "ali9899-59774.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289917698507:android:b4e2f9083d8f2ad3adf64e",
+        "android_client_info": {
+          "package_name": "com.rooh.rooh_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQDCSJeKrxpqKr_Wo2Me3FjV_9UUtynmE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
