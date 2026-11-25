@@ -13,7 +13,7 @@ void main() {
     });
 
     test('publishes original content under valid category identifiers', () {
-      final documents = InitialLibrarySeedRepository.initialDocuments;
+      const documents = InitialLibrarySeedRepository.initialDocuments;
       final Set<String> categoryIds = documents
           .where((InitialSeedDocument item) =>
               item.path.startsWith('categories/'))
