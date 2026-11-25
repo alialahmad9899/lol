@@ -20,6 +20,16 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  static const List<String> _interestOptions = <String>[
+    'وعي',
+    'تطوير الذات',
+    'استرخاء',
+    'تركيز',
+    'تغيير',
+    'بناء العادات',
+    'رُوح اليومية',
+  ];
+  final Set<String> _selectedInterests = <String>{};
 
   bool _isCreatingAccount = false;
   bool _isBusy = false;
@@ -37,6 +47,10 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isCreatingAccount && _selectedInterests.isEmpty) {
+      _setFeedback('اختر مجالاً واحداً على الأقل حتى نخصص تجربتك في رُوح.');
+      return;
+    }
 
     setState(() {
       _isBusy = true;
@@ -49,6 +63,7 @@ class _AuthPageState extends State<AuthPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
           displayName: _nameController.text.trim(),
+          interests: _selectedInterests.toList(growable: false),
         );
       } else {
         await widget.repository.signIn(
@@ -200,6 +215,31 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                         validator: (String? value) =>
                             AuthInputValidator.validateDisplayName(value ?? ''),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'ما المجالات التي تهمك؟',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _interestOptions.map((String interest) {
+                          return FilterChip(
+                            label: Text(interest),
+                            selected: _selectedInterests.contains(interest),
+                            onSelected: (bool selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedInterests.add(interest);
+                                } else {
+                                  _selectedInterests.remove(interest);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(growable: false),
                       ),
                       const SizedBox(height: 14),
                     ],
