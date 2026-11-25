@@ -5,6 +5,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../content/presentation/explore_page.dart';
+import '../../courses/presentation/course_catalog_page.dart';
 import '../../profile/presentation/profile_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -30,6 +31,20 @@ class HomePage extends StatelessWidget {
         builder: (BuildContext context) => ExplorePage(
           initialCategoryName: categoryName,
         ),
+      ),
+    );
+  }
+
+  void _openCourses(BuildContext context) {
+    final User? currentUser = user;
+    if (currentUser == null) {
+      _showMessage(context, 'سجّل الدخول أولاً لعرض الكورسات.');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) =>
+            CourseCatalogPage(userId: currentUser.uid),
       ),
     );
   }
@@ -201,11 +216,12 @@ class HomePage extends StatelessWidget {
                 subtitle: 'مسارات عملية للتعلم والتغيير',
               ),
               const SizedBox(height: 14),
-              const _ComingSoonCard(
+              _ComingSoonCard(
                 icon: Icons.school_outlined,
                 title: 'دورات رُوح',
                 description:
-                    'ستظهر هنا الدورات المجانية والمدفوعة بعد ربط لوحة الإدارة.',
+                    'تصفح الدورات المجانية والمدفوعة وتابع تقدمك في الدروس.',
+                onTap: () => _openCourses(context),
               ),
               const SizedBox(height: 14),
               const _ComingSoonCard(
@@ -450,22 +466,29 @@ class _ComingSoonCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String description;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: RoohTheme.surface,
+    return Material(
+      color: RoohTheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: RoohTheme.border),
-      ),
-      child: Row(
+        child: Container(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: RoohTheme.border),
+          ),
+          child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(icon, color: RoohTheme.primary, size: 25),
@@ -490,7 +513,7 @@ class _ComingSoonCard extends StatelessWidget {
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
