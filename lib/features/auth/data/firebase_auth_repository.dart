@@ -20,13 +20,18 @@ class FirebaseAuthRepository {
     required String email,
     required String password,
     required String displayName,
+    List<String> interests = const <String>[],
   }) async {
     final UserCredential credential =
         await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
-    await _syncProfile(credential.user, displayName: displayName);
+    await _syncProfile(
+      credential.user,
+      displayName: displayName,
+      interests: interests,
+    );
     return credential;
   }
 
@@ -59,11 +64,16 @@ class FirebaseAuthRepository {
   Future<void> _syncProfile(
     User? user, {
     String? displayName,
+    List<String> interests = const <String>[],
   }) async {
     if (user == null) return;
 
     try {
-      await _profiles.ensureProfile(user, displayName: displayName);
+      await _profiles.ensureProfile(
+        user,
+        displayName: displayName,
+        interests: interests,
+      );
     } catch (error, stackTrace) {
       // Do not leave a partially signed-in session when its profile could not
       // be read or created. The user can retry after the data service is fixed.
