@@ -82,6 +82,10 @@ test('users can read only their own profile and cannot elevate privileges', asyn
   await seed('users/alice', profileData('alice'));
   await seed('users/bob', profileData('bob'));
 
+  const charlie = signedIn('charlie');
+  await assertSucceeds(
+    setDoc(doc(charlie, 'users/charlie'), profileData('charlie')),
+  );
   await assertSucceeds(getDoc(doc(alice, 'users/alice')));
   await assertFails(getDoc(doc(bob, 'users/alice')));
   await assertFails(getDocs(collection(alice, 'users')));
@@ -96,6 +100,14 @@ test('users can read only their own profile and cannot elevate privileges', asyn
   await assertFails(
     updateDoc(doc(alice, 'users/alice'), {
       isAdmin: true,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+
+  await assertSucceeds(
+    updateDoc(doc(alice, 'users/alice'), {
+      displayName: 'علي',
+      primaryGoal: 'تنمية الوعي',
       updatedAt: serverTimestamp(),
     }),
   );
