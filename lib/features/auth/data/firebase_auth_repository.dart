@@ -36,6 +36,7 @@ class FirebaseAuthRepository {
       interests: interests,
       primaryGoal: primaryGoal,
     );
+    await credential.user?.sendEmailVerification();
     return credential;
   }
 
