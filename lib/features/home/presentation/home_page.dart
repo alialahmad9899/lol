@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_logo.dart';
+import '../../content/presentation/explore_page.dart';
 import '../../profile/presentation/profile_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -21,6 +22,16 @@ class HomePage extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       );
+  }
+
+  void _openExplore(BuildContext context, {String? categoryName}) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => ExplorePage(
+          initialCategoryName: categoryName,
+        ),
+      ),
+    );
   }
 
   @override
@@ -55,6 +66,11 @@ class HomePage extends StatelessWidget {
           ],
         ),
         actions: <Widget>[
+          IconButton(
+            tooltip: 'استكشف المحتوى',
+            onPressed: () => _openExplore(context),
+            icon: const Icon(Icons.search_rounded),
+          ),
           IconButton(
             tooltip: 'الملف الشخصي',
             onPressed: () {
@@ -100,10 +116,7 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _WelcomeCard(
-                onTap: () => _showMessage(
-                  context,
-                  'سنضيف جلساتك وتمارينك الأولى هنا.',
-                ),
+                onTap: () => _openExplore(context, categoryName: 'استرخاء'),
               ),
               const SizedBox(height: 30),
               const _SectionTitle(
@@ -125,7 +138,7 @@ class HomePage extends StatelessWidget {
                         subtitle: 'افهم ذاتك أكثر',
                         icon: Icons.lightbulb_outline_rounded,
                         onTap: () =>
-                            _showMessage(context, 'قسم الوعي قيد التجهيز.'),
+                            _openExplore(context, categoryName: 'وعي'),
                       ),
                       _CategoryCard(
                         width: itemWidth,
@@ -133,7 +146,7 @@ class HomePage extends StatelessWidget {
                         subtitle: 'استعد هدوءك',
                         icon: Icons.spa_outlined,
                         onTap: () =>
-                            _showMessage(context, 'قسم الاسترخاء قيد التجهيز.'),
+                            _openExplore(context, categoryName: 'استرخاء'),
                       ),
                       _CategoryCard(
                         width: itemWidth,
@@ -141,7 +154,7 @@ class HomePage extends StatelessWidget {
                         subtitle: 'كن حاضراً',
                         icon: Icons.center_focus_strong_rounded,
                         onTap: () =>
-                            _showMessage(context, 'قسم التركيز قيد التجهيز.'),
+                            _openExplore(context, categoryName: 'تركيز'),
                       ),
                       _CategoryCard(
                         width: itemWidth,
@@ -149,7 +162,7 @@ class HomePage extends StatelessWidget {
                         subtitle: 'نمُ بخطوات ثابتة',
                         icon: Icons.trending_up_rounded,
                         onTap: () =>
-                            _showMessage(context, 'قسم التطوير قيد التجهيز.'),
+                            _openExplore(context, categoryName: 'تطوير'),
                       ),
                     ],
                   );
@@ -162,10 +175,7 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               _PracticeCard(
-                onTap: () => _showMessage(
-                  context,
-                  'سنربط هذا التمرين بمكتبة الجلسات الصوتية.',
-                ),
+                onTap: () => _openExplore(context, categoryName: 'استرخاء'),
               ),
               const SizedBox(height: 30),
               const _SectionTitle(
