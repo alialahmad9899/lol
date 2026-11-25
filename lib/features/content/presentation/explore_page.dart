@@ -197,14 +197,13 @@ class _ExplorePageState extends State<ExplorePage> {
                             const SizedBox(height: 10),
                         itemBuilder: (BuildContext context, int index) {
                           final ContentItem item = items[index];
-                          final String categoryName = categories
-                              .where(
-                                (ContentCategory category) =>
-                                    category.id == item.categoryId,
-                              )
-                              .map((ContentCategory category) => category.title)
-                              .firstOrNull ??
-                              'رُوح';
+                          String categoryName = 'رُوح';
+                          for (final ContentCategory category in categories) {
+                            if (category.id == item.categoryId) {
+                              categoryName = category.title;
+                              break;
+                            }
+                          }
 
                           return _ContentTile(
                             item: item,
@@ -246,18 +245,12 @@ class _ContentTile extends StatelessWidget {
   final String categoryName;
   final VoidCallback onTap;
 
-  String get _typeLabel {
-    switch (item.type) {
-      case 'audio':
-        return 'جلسة صوتية';
-      case 'video':
-        return 'فيديو';
-      case 'exercise':
-        return 'تمرين';
-      default:
-        return 'محتوى نصي';
-    }
-  }
+  String get _typeLabel => switch (item.type) {
+        'audio' => 'جلسة صوتية',
+        'video' => 'فيديو',
+        'exercise' => 'تمرين',
+        _ => 'محتوى نصي',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -352,17 +345,12 @@ class ContentDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String typeLabel;
-    switch (item.type) {
-      case 'audio':
-        typeLabel = 'جلسة صوتية';
-      case 'video':
-        typeLabel = 'فيديو';
-      case 'exercise':
-        typeLabel = 'تمرين عملي';
-      default:
-        typeLabel = 'محتوى نصي';
-    }
+    final String typeLabel = switch (item.type) {
+      'audio' => 'جلسة صوتية',
+      'video' => 'فيديو',
+      'exercise' => 'تمرين عملي',
+      _ => 'محتوى نصي',
+    };
 
     return Scaffold(
       appBar: AppBar(title: const Text('تفاصيل المحتوى')),
