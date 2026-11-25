@@ -114,6 +114,115 @@ class ContentRepository {
           },
         );
   }
+
+  CollectionReference<Map<String, dynamic>> _userCollection(
+    String userId,
+    String collection,
+  ) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection(collection);
+  }
+
+  Stream<bool> watchSavedStatus({
+    required String userId,
+    required String contentId,
+  }) {
+    return _userCollection('savedContent', userId)
+        .doc(contentId)
+        .snapshots()
+        .map((DocumentSnapshot<Map<String, dynamic>> snapshot) => snapshot.exists);
+  }
+
+  Stream<bool> watchCompletedStatus({
+    required String userId,
+    required String contentId,
+  }) {
+    return _userCollection('contentProgress', userId)
+        .doc(contentId)
+        .snapshots()
+        .map((DocumentSnapshot<Map<String, dynamic>> snapshot) =>
+            snapshot.data()?['completed'] == true);
+  }
+
+  Stream<List<String>> watchSavedContentIds(String userId) {
+    return _userCollection('savedContent', userId).snapshots().map(
+      (QuerySnapshot<Map<String, dynamic>> snapshot) {
+        final docs = snapshot.docs.toList(growable: true);
+        docs.sort((first, second) {
+          final Object? firstValue = first.data()['createdAt'];
+          final Object? secondValue = second.data()['createdAt'];
+          final int firstTime =
+              firstValue is Timestamp ? firstValue.millisecondsSinceEpoch : 0;
+          final int secondTime =
+              secondValue is Timestamp ? secondValue.millisecondsSinceEpoch : 0;
+          return secondTime.compareTo(firstTime);
+        });
+        return docs.map((doc) => doc.id).toList(growable: false);
+      },
+    );
+  }
+
+  Stream<List<String>> watchCompletedContentIds(String userId) {
+    return _userCollection('contentProgress', userId).snapshots().map(
+      (QuerySnapshot<Map<String, dynamic>> snapshot) {
+        final docs = snapshot.docs
+            .where((doc) => doc.data()['completed'] == true)
+            .toList(growable: true);
+        docs.sort((first, second) {
+          final Object? firstValue = first.data()['completedAt'];
+          final Object? secondValue = second.data()['completedAt'];
+          final int firstTime =
+              firstValue is Timestamp ? firstValue.millisecondsSinceEpoch : 0;
+          final int secondTime =
+              secondValue is Timestamp ? secondValue.millisecondsSinceEpoch : 0;
+          return secondTime.compareTo(firstTime);
+        });
+        return docs.map((doc) => doc.id).toList(growable: false);
+      },
+    );
+  }
+
+  Future<ContentItem?> fetchPublishedItem(String contentId) async {
+    final DocumentSnapshot<Map<String, dynamic>> snapshot =
+        await _firestore.collection('content_items').doc(contentId).get();
+    if (!snapshot.exists || snapshot.data()?['status'] != 'published') {
+      return null;
+    }
+    return ContentItem.fromMap(snapshot.id, snapshot.data()!);
+  }
+
+  Future<void> setSaved({
+    required String userId,
+    required ContentItem item,
+    required bool saved,
+  }) async {
+    final DocumentReference<Map<String, dynamic>> reference =
+        _userCollection('savedContent', userId).doc(item.id);
+    if (!saved) {
+      await reference.delete();
+      return;
+    }
+    await reference.set(<String, Object>{
+      'contentId': item.id,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> markCompleted({
+    required String userId,
+    required String contentId,
+  }) async {
+    final DocumentReference<Map<String, dynamic>> reference =
+        _userCollection('contentProgress', userId).doc(contentId);
+    await reference.set(<String, Object>{
+      'contentId': contentId,
+      'completed': true,
+      'completedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }
 
 String _readString(Object? value, {String fallback = ''}) {
