@@ -31,9 +31,9 @@ abstract final class RoohTheme {
         centerTitle: false,
       ),
       textTheme: ThemeData.light().textTheme.apply(
-        bodyColor: ink,
-        displayColor: ink,
-      ),
+            bodyColor: ink,
+            displayColor: ink,
+          ),
       dividerColor: border,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

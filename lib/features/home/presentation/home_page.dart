@@ -107,28 +107,32 @@ class HomePage extends StatelessWidget {
                         title: 'وعي',
                         subtitle: 'افهم ذاتك أكثر',
                         icon: Icons.lightbulb_outline_rounded,
-                        onTap: () => _showMessage(context, 'قسم الوعي قيد التجهيز.'),
+                        onTap: () =>
+                            _showMessage(context, 'قسم الوعي قيد التجهيز.'),
                       ),
                       _CategoryCard(
                         width: itemWidth,
                         title: 'استرخاء',
                         subtitle: 'استعد هدوءك',
                         icon: Icons.spa_outlined,
-                        onTap: () => _showMessage(context, 'قسم الاسترخاء قيد التجهيز.'),
+                        onTap: () =>
+                            _showMessage(context, 'قسم الاسترخاء قيد التجهيز.'),
                       ),
                       _CategoryCard(
                         width: itemWidth,
                         title: 'تركيز',
                         subtitle: 'كن حاضراً',
                         icon: Icons.center_focus_strong_rounded,
-                        onTap: () => _showMessage(context, 'قسم التركيز قيد التجهيز.'),
+                        onTap: () =>
+                            _showMessage(context, 'قسم التركيز قيد التجهيز.'),
                       ),
                       _CategoryCard(
                         width: itemWidth,
                         title: 'تطوير',
                         subtitle: 'نمُ بخطوات ثابتة',
                         icon: Icons.trending_up_rounded,
-                        onTap: () => _showMessage(context, 'قسم التطوير قيد التجهيز.'),
+                        onTap: () =>
+                            _showMessage(context, 'قسم التطوير قيد التجهيز.'),
                       ),
                     ],
                   );
@@ -155,13 +159,15 @@ class HomePage extends StatelessWidget {
               const _ComingSoonCard(
                 icon: Icons.school_outlined,
                 title: 'دورات رُوح',
-                description: 'ستظهر هنا الدورات المجانية والمدفوعة بعد ربط لوحة الإدارة.',
+                description:
+                    'ستظهر هنا الدورات المجانية والمدفوعة بعد ربط لوحة الإدارة.',
               ),
               const SizedBox(height: 14),
               const _ComingSoonCard(
                 icon: Icons.sensors_rounded,
                 title: 'البث المباشر',
-                description: 'مواعيد الجلسات المباشرة وروابط الدخول والتنبيهات.',
+                description:
+                    'مواعيد الجلسات المباشرة وروابط الدخول والتنبيهات.',
               ),
             ],
           ),
@@ -435,7 +441,8 @@ class _ComingSoonCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 5),
                 Text(
                   description,
