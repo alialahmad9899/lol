@@ -133,10 +133,7 @@ service cloud.firestore {
           || (
             isSignedIn()
             && isCoursePublished(courseId)
-            && (
-              isFreeCourse(courseId)
-              || hasActiveCourseEnrollment(request.auth.uid, courseId)
-            )
+            && hasActiveCourseEnrollment(request.auth.uid, courseId)
           );
         allow create, update, delete: if isAdmin();
       }
