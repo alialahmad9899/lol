@@ -78,9 +78,12 @@ class CourseLesson {
   factory CourseLesson.fromSnapshot(
     QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
   ) {
-    final Map<String, dynamic> data = snapshot.data();
+    return CourseLesson.fromMap(snapshot.id, snapshot.data());
+  }
+
+  factory CourseLesson.fromMap(String id, Map<String, dynamic> data) {
     return CourseLesson(
-      id: snapshot.id,
+      id: id,
       title: _stringValue(data['title'], fallback: 'درس بدون عنوان'),
       summary: _stringValue(data['summary']),
       body: _stringValue(data['body'] ?? data['content']),
