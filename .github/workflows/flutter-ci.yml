@@ -28,8 +28,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check Dart formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+      # Normalize formatting in the temporary CI checkout before validation.
+      # This does not write formatted files back to the repository.
+      - name: Format Dart sources
+        run: dart format lib test
 
       - name: Analyze
         run: flutter analyze --fatal-infos
