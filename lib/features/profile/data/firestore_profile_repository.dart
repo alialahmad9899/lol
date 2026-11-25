@@ -14,6 +14,7 @@ class FirestoreProfileRepository {
     User user, {
     String? displayName,
     List<String> interests = const <String>[],
+    String? primaryGoal,
   }) async {
     final String? email = user.email;
     if (email == null || email.isEmpty) {
@@ -43,6 +44,15 @@ class FirestoreProfileRepository {
       );
     }
 
+    final String normalizedGoal = (primaryGoal ?? '').trim();
+    if (normalizedGoal.length > 120) {
+      throw ArgumentError.value(
+        primaryGoal,
+        'primaryGoal',
+        'يجب ألا يتجاوز الهدف 120 محرفاً.',
+      );
+    }
+
     final DocumentReference<Map<String, dynamic>> userDocument =
         _users.doc(user.uid);
     final DocumentSnapshot<Map<String, dynamic>> snapshot =
@@ -57,6 +67,7 @@ class FirestoreProfileRepository {
       'displayName': safeDisplayName,
       'locale': 'ar',
       'interests': normalizedInterests,
+      'primaryGoal': normalizedGoal,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'schemaVersion': 1,
@@ -81,6 +92,7 @@ class FirestoreProfileRepository {
     String? displayName,
     String? locale,
     List<String>? interests,
+    String? primaryGoal,
   }) async {
     final Map<String, Object> changes = <String, Object>{};
 
@@ -116,6 +128,18 @@ class FirestoreProfileRepository {
         );
       }
       changes['interests'] = normalizedInterests;
+    }
+
+    if (primaryGoal != null) {
+      final String normalizedGoal = primaryGoal.trim();
+      if (normalizedGoal.length > 120) {
+        throw ArgumentError.value(
+          primaryGoal,
+          'primaryGoal',
+          'يجب ألا يتجاوز الهدف 120 محرفاً.',
+        );
+      }
+      changes['primaryGoal'] = normalizedGoal;
     }
 
     if (changes.isEmpty) return;
