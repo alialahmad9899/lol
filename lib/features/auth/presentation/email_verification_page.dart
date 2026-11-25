@@ -118,7 +118,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'أرسلنا رسالة تحقق إلى:',
+                    'يحتاج حسابك إلى تأكيد البريد الإلكتروني قبل متابعة استخدام رُوح:',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: RoohTheme.mutedInk,
@@ -132,7 +132,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'افتح الرسالة واضغط على رابط التأكيد. بعد ذلك ارجع إلى رُوح واضغط على زر التحقق من جديد. لن نفتح حسابك قبل تأكيد البريد.',
+                    'افتح رسالة التحقق واضغط على رابط التأكيد، ثم ارجع إلى رُوح واضغط على زر التحقق. إذا لم تصلك الرسالة، يمكنك طلب إرسالها من جديد.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: RoohTheme.mutedInk,
