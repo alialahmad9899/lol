@@ -164,6 +164,24 @@ class HomePage extends StatelessWidget {
                         onTap: () =>
                             _openExplore(context, categoryName: 'تطوير'),
                       ),
+                      _CategoryCard(
+                        width: itemWidth,
+                        title: 'تغيير',
+                        subtitle: 'ابدأ بخطوة جديدة',
+                        icon: Icons.auto_awesome_outlined,
+                        onTap: () =>
+                            _openExplore(context, categoryName: 'تغيير'),
+                      ),
+                      _CategoryCard(
+                        width: itemWidth,
+                        title: 'رُوح اليومية',
+                        subtitle: 'مساحة يومية لك',
+                        icon: Icons.today_outlined,
+                        onTap: () => _openExplore(
+                          context,
+                          categoryName: 'رُوح اليومية',
+                        ),
+                      ),
                     ],
                   );
                 },
