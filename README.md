@@ -38,6 +38,8 @@ dart format lib test
 flutter analyze --fatal-infos
 flutter test
 flutter run
+npm install
+npm run test:rules
 ```
 
 ## ربط Firebase
@@ -46,6 +48,7 @@ flutter run
 
 - `docs/FIREBASE_SETUP.md` — حالة مشروع Firebase وخطوات تفعيل Auth وFirestore ونشر القواعد.
 - `docs/FIRESTORE_SCHEMA.md` — شكل المستندات وحقول المحتوى والمحفوظات والتقدم والكورسات والبرامج والتسجيلات وطلبات الدفع.
+- `tests/firestore.rules.test.mjs` — اختبارات صلاحيات Firestore عبر المحاكي.
 - `docs/FREE_STACK.md` — الخدمات والحدود المجانية المعتمدة.
 - `docs/PRODUCT_ROADMAP.md` — مراحل التطوير وما اكتمل وما بقي.
 
@@ -72,6 +75,7 @@ lib/
     profile/
     programs/
 test/
+tests/
 docs/
 firestore.rules
 firebase.json
