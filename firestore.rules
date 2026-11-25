@@ -51,7 +51,9 @@ service cloud.firestore {
     }
 
     match /admins/{adminUid} {
-      allow read, write: if false;
+      // An account may verify only its own admin membership document.
+      allow get: if isOwner(adminUid);
+      allow list, create, update, delete: if false;
     }
 
     match /users/{userId} {
