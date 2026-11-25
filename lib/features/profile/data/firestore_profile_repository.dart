@@ -13,6 +13,7 @@ class FirestoreProfileRepository {
   Future<void> ensureProfile(
     User user, {
     String? displayName,
+    List<String> interests = const <String>[],
   }) async {
     final String? email = user.email;
     if (email == null || email.isEmpty) {
@@ -29,6 +30,19 @@ class FirestoreProfileRepository {
       );
     }
 
+    final List<String> normalizedInterests = interests
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (normalizedInterests.length > 20) {
+      throw ArgumentError.value(
+        interests,
+        'interests',
+        'لا يمكن حفظ أكثر من 20 اهتماماً.',
+      );
+    }
+
     final DocumentReference<Map<String, dynamic>> userDocument =
         _users.doc(user.uid);
     final DocumentSnapshot<Map<String, dynamic>> snapshot =
@@ -42,7 +56,7 @@ class FirestoreProfileRepository {
       'email': email,
       'displayName': safeDisplayName,
       'locale': 'ar',
-      'interests': <String>[],
+      'interests': normalizedInterests,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'schemaVersion': 1,
