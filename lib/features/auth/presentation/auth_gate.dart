@@ -59,7 +59,10 @@ class _AuthGateState extends State<AuthGate> {
           return AuthPage(repository: repository);
         }
 
-        return HomePage(onSignOut: repository.signOut);
+        return HomePage(
+          user: user,
+          onSignOut: repository.signOut,
+        );
       },
     );
   }
