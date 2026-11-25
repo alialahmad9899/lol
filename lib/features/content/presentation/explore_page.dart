@@ -4,8 +4,13 @@ import '../../../core/theme/app_theme.dart';
 import '../data/content_repository.dart';
 
 class ExplorePage extends StatefulWidget {
-  const ExplorePage({super.key, this.initialCategoryName});
+  const ExplorePage({
+    super.key,
+    required this.userId,
+    this.initialCategoryName,
+  });
 
+  final String userId;
   final String? initialCategoryName;
 
   @override
@@ -215,6 +220,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                       ContentDetailsPage(
                                     item: item,
                                     categoryName: categoryName,
+                                    userId: widget.userId,
                                   ),
                                 ),
                               );
@@ -338,10 +344,12 @@ class ContentDetailsPage extends StatelessWidget {
     super.key,
     required this.item,
     required this.categoryName,
+    required this.userId,
   });
 
   final ContentItem item;
   final String categoryName;
+  final String userId;
 
   @override
   Widget build(BuildContext context) {
@@ -394,6 +402,11 @@ class ContentDetailsPage extends StatelessWidget {
                     Chip(label: Text('${item.durationMinutes} دقيقة')),
                 ],
               ),
+              const SizedBox(height: 18),
+              _ContentUserActions(
+                userId: userId,
+                item: item,
+              ),
               const SizedBox(height: 24),
               if (item.body.isNotEmpty)
                 SelectableText(
@@ -422,6 +435,116 @@ class ContentDetailsPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ContentUserActions extends StatefulWidget {
+  const _ContentUserActions({
+    required this.userId,
+    required this.item,
+  });
+
+  final String userId;
+  final ContentItem item;
+
+  @override
+  State<_ContentUserActions> createState() => _ContentUserActionsState();
+}
+
+class _ContentUserActionsState extends State<_ContentUserActions> {
+  late final ContentRepository _repository = ContentRepository();
+  bool _saving = false;
+
+  void _showMessage(String message, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor:
+            error ? const Color(0xFF9B382B) : RoohTheme.primary,
+      ),
+    );
+  }
+
+  Future<void> _toggleSaved(bool saved) async {
+    setState(() => _saving = true);
+    try {
+      await _repository.setSaved(
+        userId: widget.userId,
+        item: widget.item,
+        saved: !saved,
+      );
+      _showMessage(
+        saved ? 'تمت إزالة المحتوى من محفوظاتك.' : 'تم حفظ المحتوى في مكتبتك.',
+      );
+    } catch (_) {
+      _showMessage('تعذر تحديث المحفوظات. حاول مرة أخرى.', error: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _markCompleted() async {
+    setState(() => _saving = true);
+    try {
+      await _repository.markCompleted(
+        userId: widget.userId,
+        contentId: widget.item.id,
+      );
+      _showMessage('أحسنت! تم تسجيل إكمال هذا المحتوى.');
+    } catch (_) {
+      _showMessage('تعذر تسجيل الإنجاز. حاول مرة أخرى.', error: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        StreamBuilder<bool>(
+          stream: _repository.watchSavedStatus(
+            userId: widget.userId,
+            contentId: widget.item.id,
+          ),
+          builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+            final bool saved = snapshot.data ?? false;
+            return OutlinedButton.icon(
+              onPressed: _saving || snapshot.hasError
+                  ? null
+                  : () => _toggleSaved(saved),
+              icon: Icon(
+                saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+              ),
+              label: Text(saved ? 'إزالة من المحفوظات' : 'حفظ في مكتبتي'),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        StreamBuilder<bool>(
+          stream: _repository.watchCompletedStatus(
+            userId: widget.userId,
+            contentId: widget.item.id,
+          ),
+          builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+            final bool completed = snapshot.data ?? false;
+            return FilledButton.icon(
+              onPressed: _saving || completed || snapshot.hasError
+                  ? null
+                  : _markCompleted,
+              icon: Icon(
+                completed ? Icons.check_circle_rounded : Icons.task_alt_rounded,
+              ),
+              label: Text(
+                completed ? 'تم إكمال هذا المحتوى' : 'وضع علامة مكتمل',
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
