@@ -36,3 +36,12 @@ google-services.json
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Node.js tooling used by Firestore emulator security tests
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
