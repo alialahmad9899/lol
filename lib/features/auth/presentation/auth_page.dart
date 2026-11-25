@@ -29,7 +29,15 @@ class _AuthPageState extends State<AuthPage> {
     'بناء العادات',
     'رُوح اليومية',
   ];
+  static const List<String> _goalOptions = <String>[
+    'فهم نفسي بشكل أعمق',
+    'تقليل التوتر واستعادة الهدوء',
+    'تحسين التركيز والانتباه',
+    'بناء عادات إيجابية',
+    'إحداث تغيير شخصي',
+  ];
   final Set<String> _selectedInterests = <String>{};
+  String? _selectedGoal;
 
   bool _isCreatingAccount = false;
   bool _isBusy = false;
@@ -51,6 +59,10 @@ class _AuthPageState extends State<AuthPage> {
       _setFeedback('اختر مجالاً واحداً على الأقل حتى نخصص تجربتك في رُوح.');
       return;
     }
+    if (_isCreatingAccount && _selectedGoal == null) {
+      _setFeedback('اختر هدفك الأساسي من استخدام رُوح.');
+      return;
+    }
 
     setState(() {
       _isBusy = true;
@@ -64,6 +76,7 @@ class _AuthPageState extends State<AuthPage> {
           password: _passwordController.text,
           displayName: _nameController.text.trim(),
           interests: _selectedInterests.toList(growable: false),
+          primaryGoal: _selectedGoal!,
         );
       } else {
         await widget.repository.signIn(
@@ -236,6 +249,27 @@ class _AuthPageState extends State<AuthPage> {
                                 } else {
                                   _selectedInterests.remove(interest);
                                 }
+                              });
+                            },
+                          );
+                        }).toList(growable: false),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'ما هدفك الأساسي من استخدام رُوح؟',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _goalOptions.map((String goal) {
+                          return ChoiceChip(
+                            label: Text(goal),
+                            selected: _selectedGoal == goal,
+                            onSelected: (bool selected) {
+                              setState(() {
+                                _selectedGoal = selected ? goal : null;
                               });
                             },
                           );
