@@ -286,6 +286,10 @@ test('manual paid-course requests are validated and admin approval grants access
     price: 40,
     currency: 'USD',
   });
+  await seed('courses/paid-course/lessons/lesson-1', {
+    title: 'الدرس الأول',
+    body: 'محتوى الكورس المدفوع',
+  });
 
   const validRequest = {
     userId: 'alice',
