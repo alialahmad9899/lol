@@ -63,3 +63,14 @@ jobs:
           name: rooh-android-debug
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+
+      # Release mode is signed with the debug key in Gradle and is only for internal testing.
+      - name: Build Android release-mode test APK
+        run: flutter build apk --release
+
+      - name: Upload release-mode test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rooh-android-release-test
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
