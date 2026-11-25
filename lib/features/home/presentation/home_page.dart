@@ -1,12 +1,15 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_logo.dart';
+import '../../profile/presentation/profile_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, this.onSignOut});
+  const HomePage({super.key, this.user, this.onSignOut});
 
+  final User? user;
   final Future<void> Function()? onSignOut;
 
   void _showMessage(BuildContext context, String message) {
@@ -18,22 +21,6 @@ class HomePage extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       );
-  }
-
-  Future<void> _handleSignOut(BuildContext context) async {
-    final Future<void> Function()? callback = onSignOut;
-    if (callback == null) {
-      _showMessage(context, 'خيار الحساب غير متاح حالياً.');
-      return;
-    }
-
-    try {
-      await callback();
-    } catch (_) {
-      if (context.mounted) {
-        _showMessage(context, 'تعذر تسجيل الخروج. حاول مرة أخرى.');
-      }
-    }
   }
 
   @override
@@ -69,9 +56,23 @@ class HomePage extends StatelessWidget {
         ),
         actions: <Widget>[
           IconButton(
-            tooltip: 'تسجيل الخروج',
-            onPressed: () => _handleSignOut(context),
-            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'الملف الشخصي',
+            onPressed: () {
+              final User? currentUser = user;
+              if (currentUser == null) {
+                _showMessage(context, 'بيانات الحساب غير متاحة حالياً.');
+                return;
+              }
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) => ProfilePage(
+                    user: currentUser,
+                    onSignOut: onSignOut,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.account_circle_outlined),
           ),
           const SizedBox(width: 8),
         ],
