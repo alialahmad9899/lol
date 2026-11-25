@@ -1,8 +1,16 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
+import 'core/firebase/firebase_bootstrap.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final FirebaseBootstrapResult firebaseResult =
+      await FirebaseBootstrap.initialize();
+  if (firebaseResult.error != null) {
+    debugPrint('Firebase initialization failed: ${firebaseResult.error}');
+  }
+
   runApp(const RoohApp());
 }

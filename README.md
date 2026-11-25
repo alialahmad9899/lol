@@ -1,40 +1,40 @@
 # رُوح — ابدأ من الداخل
 
-مشروع تطبيق رُوح للدكتور خالد علوش. تطبيق عربي للوعي وتطوير الذات والاسترخاء والتركيز وبناء العادات، مع جلسات صوتية ومرئية وبرامج وكورسات وبث مباشر ولوحة إدارة.
+مشروع تطبيق رُوح للدكتور خالد علوش. تطبيق عربي للوعي وتطوير الذات والاسترخاء والتركيز وبناء العادات، مع برامج وكورسات ولوحة إدارة.
 
 ## الحالة الحالية
 
-هذه أول حزمة تأسيسية لمشروع Flutter جديد. الموجود حالياً هو هيكل التطبيق، الهوية البصرية الأولية، شاشة رئيسية عربية، اختبار واجهة، وخطة تقنية. لم يتم بعد ربط التطبيق بقاعدة بيانات أو تسجيل دخول حقيقي أو خدمات بث ودفع.
+هذه حزمة Flutter تأسيسية. الموجود حالياً هو الهيكل والهوية الأولية والشاشة الرئيسية العربية، إضافة إلى طبقة Firebase Authentication وCloud Firestore وقواعد أمان أولية. لم يكتمل الاتصال بمشروع Firebase حقيقي بعد؛ يلزم تنفيذ خطوات `docs/FIREBASE_SETUP.md`.
 
 ## المتطلبات المحلية
 
-- Flutter SDK بإصدار Stable.
+- Flutter SDK (Dart 3.12 أو أحدث).
 - Android Studio أو Android SDK لتشغيل وبناء Android.
 - Xcode على macOS فقط لبناء وتشغيل iOS.
+- Node.js لاستخدام Firebase CLI أثناء إعداد المشروع.
 
 ## التشغيل
 
 بعد تثبيت Flutter:
 
 ```bash
-flutter --version
 flutter pub get
-dart format .
-flutter analyze
+dart format lib test
+flutter analyze --fatal-infos
 flutter test
-```
-
-لإضافة ملفات التشغيل الأصلية Android وiOS إلى نسخة محلية جديدة من المستودع:
-
-```bash
-flutter create --platforms=android,ios --org com.rooh --project-name rooh_app .
-```
-
-ثم:
-
-```bash
 flutter run
 ```
+
+## ربط Firebase
+
+نعتمد Firebase Spark فقط دون بطاقة أو Billing أو Storage أو Cloud Functions. راجع:
+- `docs/FIREBASE_SETUP.md` — إنشاء المشروع وربط تطبيقات Android/iOS ونشر قواعد الأمان.
+- `docs/FREE_STACK.md` — الخدمات والحدود المجانية المعتمدة.
+- `docs/PRODUCT_ROADMAP.md` — مراحل التطوير.
+
+قبل تنفيذ FlutterFire CLI، تبقى الشاشة الرئيسية قابلة للتشغيل؛ ملف Firebase الموجود حالياً placeholder ولن يتصل بخادم إلى أن يتم توليد ملف الإعداد الحقيقي.
+
+لا تضع Service Account JSON أو مفاتيح Admin SDK داخل التطبيق أو GitHub.
 
 ## بنية المشروع
 
@@ -44,18 +44,17 @@ lib/
   main.dart
   core/
     constants/
+    firebase/
     theme/
   features/
+    auth/
     home/presentation/
+    profile/
 test/
 docs/
+firestore.rules
+firebase.json
 ```
-
-سنحافظ على تنظيم Feature-first، ونفصل الواجهات عن مصادر البيانات والخدمات. ستضاف إدارة الحالة والتوجيه والاتصال بالخادم في مراحلها بعد تثبيت عقود البيانات والأمان.
-
-## قرار الخدمات المجانية
-
-راجع `docs/FREE_STACK.md`. لا نضيف أي خدمة مدفوعة أو اشتراك تشغيلي في النسخة التجريبية. كل حدود الخطة المجانية موثقة، ولن نضع مفاتيح سرية داخل التطبيق.
 
 ## الفروع
 

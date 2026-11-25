@@ -1,0 +1,104 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Admin membership is provisioned manually in Firebase Console.
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function validProfileFields(data) {
+      return data.keys().hasOnly([
+          'uid',
+          'email',
+          'displayName',
+          'locale',
+          'interests',
+          'createdAt',
+          'updatedAt',
+          'schemaVersion'
+        ])
+        && data.keys().hasAll([
+          'uid',
+          'email',
+          'displayName',
+          'locale',
+          'interests',
+          'createdAt',
+          'updatedAt',
+          'schemaVersion'
+        ])
+        && data.uid == request.auth.uid
+        && data.email == request.auth.token.email
+        && data.displayName is string
+        && data.displayName.size() <= 100
+        && data.locale in ['ar', 'en']
+        && data.interests is list
+        && data.interests.size() <= 20
+        && data.schemaVersion == 1;
+    }
+
+    match /admins/{adminUid} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      allow create: if isOwner(userId)
+        && validProfileFields(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName',
+          'locale',
+          'interests',
+          'updatedAt'
+        ])
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.schemaVersion == resource.data.schemaVersion
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 100
+        && request.resource.data.locale in ['ar', 'en']
+        && request.resource.data.interests is list
+        && request.resource.data.interests.size() <= 20
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /content_items/{contentId} {
+      allow read: if isAdmin() || resource.data.status == 'published';
+      allow write: if isAdmin();
+    }
+
+    match /programs/{programId} {
+      allow read: if isAdmin() || resource.data.status == 'published';
+      allow write: if isAdmin();
+    }
+
+    match /courses/{courseId} {
+      allow read: if isAdmin() || resource.data.status == 'published';
+      allow write: if isAdmin();
+    }
+  }
+}

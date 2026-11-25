@@ -30,3 +30,9 @@ ios/Runner/GeneratedPluginRegistrant.*
 *.keystore
 GoogleService-Info.plist
 google-services.json
+
+# Firebase local state and emulator logs
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
