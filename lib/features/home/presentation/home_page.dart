@@ -20,6 +20,22 @@ class HomePage extends StatelessWidget {
       );
   }
 
+  Future<void> _handleSignOut(BuildContext context) async {
+    final Future<void> Function()? callback = onSignOut;
+    if (callback == null) {
+      _showMessage(context, 'خيار الحساب غير متاح حالياً.');
+      return;
+    }
+
+    try {
+      await callback();
+    } catch (_) {
+      if (context.mounted) {
+        _showMessage(context, 'تعذر تسجيل الخروج. حاول مرة أخرى.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
@@ -54,9 +70,7 @@ class HomePage extends StatelessWidget {
         actions: <Widget>[
           IconButton(
             tooltip: 'تسجيل الخروج',
-            onPressed: onSignOut == null
-                ? () => _showMessage(context, 'خيار الحساب غير متاح حالياً.')
-                : () => onSignOut!(),
+            onPressed: () => _handleSignOut(context),
             icon: const Icon(Icons.logout_rounded),
           ),
           const SizedBox(width: 8),
