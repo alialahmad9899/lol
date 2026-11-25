@@ -88,6 +88,58 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if false;
+
+      match /savedContent/{contentId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['contentId', 'createdAt'])
+          && request.resource.data.keys().hasAll(['contentId', 'createdAt'])
+          && request.resource.data.contentId == contentId
+          && exists(/databases/$(database)/documents/content_items/$(contentId))
+          && get(/databases/$(database)/documents/content_items/$(contentId)).data.status == 'published'
+          && request.resource.data.createdAt == request.time;
+
+        allow update: if false;
+        allow delete: if isOwner(userId);
+      }
+
+      match /contentProgress/{contentId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasOnly([
+            'contentId',
+            'completed',
+            'completedAt',
+            'updatedAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'contentId',
+            'completed',
+            'completedAt',
+            'updatedAt'
+          ])
+          && request.resource.data.contentId == contentId
+          && request.resource.data.completed == true
+          && exists(/databases/$(database)/documents/content_items/$(contentId))
+          && get(/databases/$(database)/documents/content_items/$(contentId)).data.status == 'published'
+          && request.resource.data.completedAt == request.time
+          && request.resource.data.updatedAt == request.time;
+
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'completed',
+            'completedAt',
+            'updatedAt'
+          ])
+          && request.resource.data.contentId == resource.data.contentId
+          && request.resource.data.completed == true
+          && request.resource.data.completedAt == request.time
+          && request.resource.data.updatedAt == request.time;
+
+        allow delete: if isOwner(userId);
+      }
     }
 
     match /categories/{categoryId} {
