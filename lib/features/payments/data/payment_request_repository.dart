@@ -184,8 +184,11 @@ class PaymentRequestRepository {
             courseData?['status'] != 'published' ||
             courseData?['isFree'] == true ||
             courseData?['price'] is! num ||
-            (courseData?['price'] as num) <= 0) {
-          throw StateError('لم تعد الدورة مؤهلة لاعتماد الدفع.');
+            (courseData?['price'] as num) <= 0 ||
+            courseData?['price'] != requestData['amount'] ||
+            courseData?['currency'] != requestData['currency'] ||
+            courseData?['title'] != requestData['courseTitle']) {
+          throw StateError('بيانات الدورة تغيّرت؛ راجع الطلب قبل اعتماده.');
         }
 
         if (enrollmentSnapshot.data()?['status'] != 'active') {
