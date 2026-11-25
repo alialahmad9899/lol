@@ -277,11 +277,15 @@ class _AuthPageState extends State<AuthPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              initialValue: _selectedGender,
+                              initialValue: _selectedGender ?? '',
                               decoration: const InputDecoration(
                                 labelText: 'الجنس (اختياري)',
                               ),
                               items: const <DropdownMenuItem<String>>[
+                                DropdownMenuItem(
+                                  value: '',
+                                  child: Text('بدون تحديد'),
+                                ),
                                 DropdownMenuItem(value: 'male', child: Text('ذكر')),
                                 DropdownMenuItem(value: 'female', child: Text('أنثى')),
                                 DropdownMenuItem(
@@ -289,8 +293,10 @@ class _AuthPageState extends State<AuthPage> {
                                   child: Text('أفضل عدم الإجابة'),
                                 ),
                               ],
-                              onChanged: (String? value) =>
-                                  setState(() => _selectedGender = value),
+                              onChanged: (String? value) => setState(
+                                () => _selectedGender =
+                                    value == null || value.isEmpty ? null : value,
+                              ),
                             ),
                           ),
                         ],

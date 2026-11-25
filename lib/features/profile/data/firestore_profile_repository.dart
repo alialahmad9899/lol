@@ -127,6 +127,7 @@ class FirestoreProfileRepository {
     String? preferredContentStyle,
     int? dailyTimeMinutes,
     String? preferredTime,
+    bool replaceOptionalFields = false,
   }) async {
     final Map<String, Object> changes = <String, Object>{};
 
@@ -185,18 +186,31 @@ class FirestoreProfileRepository {
       dailyTimeMinutes: dailyTimeMinutes,
       preferredTime: preferredTime,
     );
-    final Map<String, dynamic> optionalChanges = <String, dynamic>{};
-    _addOptionalProfileFields(
-      optionalChanges,
-      age: age,
-      gender: gender,
-      city: city,
-      country: country,
-      preferredContentStyle: preferredContentStyle,
-      dailyTimeMinutes: dailyTimeMinutes,
-      preferredTime: preferredTime,
-    );
-    changes.addAll(optionalChanges.cast<String, Object>());
+    if (replaceOptionalFields) {
+      _addOptionalProfileUpdateFields(
+        changes,
+        age: age,
+        gender: gender,
+        city: city,
+        country: country,
+        preferredContentStyle: preferredContentStyle,
+        dailyTimeMinutes: dailyTimeMinutes,
+        preferredTime: preferredTime,
+      );
+    } else {
+      final Map<String, dynamic> optionalChanges = <String, dynamic>{};
+      _addOptionalProfileFields(
+        optionalChanges,
+        age: age,
+        gender: gender,
+        city: city,
+        country: country,
+        preferredContentStyle: preferredContentStyle,
+        dailyTimeMinutes: dailyTimeMinutes,
+        preferredTime: preferredTime,
+      );
+      changes.addAll(optionalChanges.cast<String, Object>());
+    }
 
     if (changes.isEmpty) return;
 
@@ -261,4 +275,28 @@ void _addOptionalProfileFields(
   }
   if (dailyTimeMinutes != null) target['dailyTimeMinutes'] = dailyTimeMinutes;
   if (preferredTime != null) target['preferredTime'] = preferredTime;
+}
+
+
+void _addOptionalProfileUpdateFields(
+  Map<String, Object> target, {
+  int? age,
+  String? gender,
+  String? city,
+  String? country,
+  String? preferredContentStyle,
+  int? dailyTimeMinutes,
+  String? preferredTime,
+}) {
+  target['age'] = age ?? FieldValue.delete();
+  target['gender'] = gender ?? FieldValue.delete();
+  target['city'] =
+      city == null || city.trim().isEmpty ? FieldValue.delete() : city.trim();
+  target['country'] = country == null || country.trim().isEmpty
+      ? FieldValue.delete()
+      : country.trim();
+  target['preferredContentStyle'] =
+      preferredContentStyle ?? FieldValue.delete();
+  target['dailyTimeMinutes'] = dailyTimeMinutes ?? FieldValue.delete();
+  target['preferredTime'] = preferredTime ?? FieldValue.delete();
 }

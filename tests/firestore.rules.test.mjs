@@ -8,6 +8,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -122,6 +123,41 @@ test('users can read only their own profile and cannot elevate privileges', asyn
       updatedAt: serverTimestamp(),
     }),
   );
+
+  await assertFails(
+    updateDoc(doc(alice, 'users/alice'), {
+      age: 12,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+
+  await assertSucceeds(
+    updateDoc(doc(alice, 'users/alice'), {
+      age: deleteField(),
+      gender: deleteField(),
+      city: deleteField(),
+      country: deleteField(),
+      preferredContentStyle: deleteField(),
+      dailyTimeMinutes: deleteField(),
+      preferredTime: deleteField(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+
+  const clearedProfile = await getDoc(doc(alice, 'users/alice'));
+  for (const field of [
+    'age',
+    'gender',
+    'city',
+    'country',
+    'preferredContentStyle',
+    'dailyTimeMinutes',
+    'preferredTime',
+  ]) {
+    if (field in clearedProfile.data()) {
+      throw new Error(`Expected optional profile field ${field} to be deleted.`);
+    }
+  }
 });
 
 test('only an existing administrator can access admin-managed collections', async () => {

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../data/admin_repository.dart';
+import '../data/initial_library_seed_repository.dart';
 import 'admin_users_page.dart';
 
 enum _AdminFieldKind {
@@ -150,6 +151,60 @@ class AdminDashboardPage extends StatefulWidget {
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
   late final Future<bool> _adminCheck =
       AdminRepository().isAdmin(widget.userId);
+  bool _seedingInitialLibrary = false;
+
+  Future<void> _seedInitialLibrary() async {
+    if (_seedingInitialLibrary) return;
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('إعداد مكتبة البداية'),
+        content: const Text(
+          'سيُضاف محتوى عربي مجاني أولي: جلسات وتمارين وكورس وبرنامج من سبعة أيام. '
+          'لن يتم تعديل أو استبدال أي سجل موجود مسبقاً.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('إضافة المحتوى'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _seedingInitialLibrary = true);
+    try {
+      final InitialLibrarySeedResult result =
+          await InitialLibrarySeedRepository().seedIfMissing();
+      if (!mounted) return;
+      final String message = result.created == 0
+          ? 'مكتبة البداية موجودة مسبقاً؛ لم نغيّر أي محتوى.'
+          : 'تمت إضافة ${result.created} سجلاً، وتجاوز ${result.skipped} سجلاً موجوداً.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذرت تهيئة المكتبة. تحقق من اتصال Firestore وصلاحية المدير.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _seedingInitialLibrary = false);
+    }
+  }
 
   static const List<_AdminSectionSpec> _sections = <_AdminSectionSpec>[
     _AdminSectionSpec(
@@ -238,6 +293,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed:
+                    _seedingInitialLibrary ? null : _seedInitialLibrary,
+                icon: _seedingInitialLibrary
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome_outlined),
+                label: Text(
+                  _seedingInitialLibrary
+                      ? 'جارٍ إعداد المكتبة...'
+                      : 'إعداد مكتبة البداية المجانية',
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'يضيف المحتوى العربي الأولي مرة واحدة، ولا يستبدل السجلات الموجودة.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: RoohTheme.mutedInk,
+                  fontSize: 12,
+                  height: 1.5,
                 ),
               ),
               const SizedBox(height: 18),

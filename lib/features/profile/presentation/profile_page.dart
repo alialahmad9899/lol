@@ -96,6 +96,7 @@ class _ProfilePageState extends State<ProfilePage> {
         preferredContentStyle: result.preferredContentStyle,
         dailyTimeMinutes: result.dailyTimeMinutes,
         preferredTime: result.preferredTime,
+        replaceOptionalFields: true,
       );
       _showMessage('تم تحديث ملفك الشخصي بنجاح.');
     } catch (_) {
@@ -560,8 +561,12 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
         primaryGoal: _selectedGoal ?? '',
         age: age,
         gender: _selectedGender,
-        city: _cityController.text.trim(),
-        country: _countryController.text.trim(),
+        city: _cityController.text.trim().isEmpty
+            ? null
+            : _cityController.text.trim(),
+        country: _countryController.text.trim().isEmpty
+            ? null
+            : _countryController.text.trim(),
         preferredContentStyle: _preferredContentStyle,
         dailyTimeMinutes: _dailyTimeMinutes,
         preferredTime: _preferredTime,
@@ -602,9 +607,13 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      initialValue: _selectedGender,
+                      initialValue: _selectedGender ?? '',
                       decoration: const InputDecoration(labelText: 'الجنس'),
                       items: const <DropdownMenuItem<String>>[
+                        DropdownMenuItem(
+                          value: '',
+                          child: Text('بدون تحديد'),
+                        ),
                         DropdownMenuItem(value: 'male', child: Text('ذكر')),
                         DropdownMenuItem(value: 'female', child: Text('أنثى')),
                         DropdownMenuItem(
@@ -612,8 +621,10 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                           child: Text('أفضل عدم الإجابة'),
                         ),
                       ],
-                      onChanged: (String? value) =>
-                          setState(() => _selectedGender = value),
+                      onChanged: (String? value) => setState(
+                        () => _selectedGender =
+                            value == null || value.isEmpty ? null : value,
+                      ),
                     ),
                   ),
                 ],
