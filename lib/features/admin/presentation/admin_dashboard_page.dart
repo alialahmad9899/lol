@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../payments/presentation/admin_payment_requests_page.dart';
 import '../data/admin_repository.dart';
 
 enum _AdminFieldKind {
@@ -250,6 +251,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 ),
               ),
               const SizedBox(height: 18),
+              _AdminSectionCard(
+                spec: const _AdminSectionSpec(
+                  title: 'طلبات الدفع اليدوي',
+                  description:
+                      'مراجعة مراجع التحويل وقبول الطلبات أو رفضها',
+                  collectionPath: 'paymentRequests',
+                  fields: <_AdminFieldSpec>[],
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AdminPaymentRequestsPage(
+                      reviewerUid: widget.userId,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               ..._sections.map(
                 (section) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
