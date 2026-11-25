@@ -46,6 +46,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final List<String> currentInterests = rawInterests is List
         ? rawInterests.whereType<String>().toList(growable: false)
         : const <String>[];
+    final String currentGoal = profile['primaryGoal'] is String
+        ? profile['primaryGoal'] as String
+        : '';
 
     final _ProfileEditResult? result =
         await showDialog<_ProfileEditResult>(
@@ -53,6 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (BuildContext context) => _ProfileEditDialog(
         initialName: currentName,
         initialInterests: currentInterests,
+        initialGoal: currentGoal,
       ),
     );
     if (result == null) return;
@@ -62,6 +66,7 @@ class _ProfilePageState extends State<ProfilePage> {
         user: widget.user,
         displayName: result.displayName,
         interests: result.interests,
+        primaryGoal: result.primaryGoal,
       );
       _showMessage('تم تحديث ملفك الشخصي بنجاح.');
     } catch (_) {
@@ -187,6 +192,15 @@ class _ProfilePageState extends State<ProfilePage> {
                       icon: Icons.email_outlined,
                       label: 'البريد الإلكتروني',
                       value: email,
+                    ),
+                    const Divider(height: 22),
+                    _ProfileInfoRow(
+                      icon: Icons.flag_outlined,
+                      label: 'الهدف الأساسي',
+                      value: profile['primaryGoal'] is String &&
+                              (profile['primaryGoal'] as String).isNotEmpty
+                          ? profile['primaryGoal'] as String
+                          : 'لم تحدد هدفك بعد',
                     ),
                   ],
                 ),
@@ -338,20 +352,24 @@ class _ProfileEditResult {
   const _ProfileEditResult({
     required this.displayName,
     required this.interests,
+    required this.primaryGoal,
   });
 
   final String displayName;
   final List<String> interests;
+  final String primaryGoal;
 }
 
 class _ProfileEditDialog extends StatefulWidget {
   const _ProfileEditDialog({
     required this.initialName,
     required this.initialInterests,
+    required this.initialGoal,
   });
 
   final String initialName;
   final List<String> initialInterests;
+  final String initialGoal;
 
   @override
   State<_ProfileEditDialog> createState() => _ProfileEditDialogState();
@@ -367,11 +385,21 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
     'بناء العادات',
     'رُوح اليومية',
   ];
+  static const List<String> _goalOptions = <String>[
+    'فهم نفسي بشكل أعمق',
+    'تقليل التوتر واستعادة الهدوء',
+    'تحسين التركيز والانتباه',
+    'بناء عادات إيجابية',
+    'إحداث تغيير شخصي',
+  ];
 
   late final TextEditingController _nameController =
       TextEditingController(text: widget.initialName);
   late final Set<String> _selectedInterests =
       widget.initialInterests.toSet();
+  String? _selectedGoal = widget.initialGoal.isEmpty
+      ? null
+      : widget.initialGoal;
 
   @override
   void dispose() {
@@ -387,6 +415,7 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
       _ProfileEditResult(
         displayName: name,
         interests: _selectedInterests.toList(growable: false),
+        primaryGoal: _selectedGoal ?? '',
       ),
     );
   }
@@ -428,6 +457,27 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                         } else {
                           _selectedInterests.remove(interest);
                         }
+                      });
+                    },
+                  );
+                }).toList(growable: false),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'هدفك الأساسي',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _goalOptions.map((String goal) {
+                  return ChoiceChip(
+                    label: Text(goal),
+                    selected: _selectedGoal == goal,
+                    onSelected: (bool selected) {
+                      setState(() {
+                        _selectedGoal = selected ? goal : null;
                       });
                     },
                   );
