@@ -5,6 +5,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../admin/presentation/admin_dashboard_page.dart';
+import '../../content/presentation/content_library_page.dart';
 import '../../content/presentation/explore_page.dart';
 import '../../courses/presentation/course_catalog_page.dart';
 import '../../programs/presentation/program_catalog_page.dart';
@@ -34,11 +35,31 @@ class HomePage extends StatelessWidget {
   }
 
   void _openExplore(BuildContext context, {String? categoryName}) {
+    final User? currentUser = user;
+    if (currentUser == null) {
+      _showMessage(context, 'سجّل الدخول أولاً لاستكشاف المحتوى.');
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) => ExplorePage(
+          userId: currentUser.uid,
           initialCategoryName: categoryName,
         ),
+      ),
+    );
+  }
+
+  void _openLibrary(BuildContext context) {
+    final User? currentUser = user;
+    if (currentUser == null) {
+      _showMessage(context, 'سجّل الدخول أولاً لفتح مكتبتك.');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) =>
+            ContentLibraryPage(userId: currentUser.uid),
       ),
     );
   }
@@ -122,6 +143,11 @@ class HomePage extends StatelessWidget {
             tooltip: 'استكشف المحتوى',
             onPressed: () => _openExplore(context),
             icon: const Icon(Icons.search_rounded),
+          ),
+          IconButton(
+            tooltip: 'مكتبتي',
+            onPressed: () => _openLibrary(context),
+            icon: const Icon(Icons.bookmarks_outlined),
           ),
           IconButton(
             tooltip: 'الملف الشخصي',
