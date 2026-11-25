@@ -135,7 +135,19 @@
 
 المسار الأساسي: `programs/{programId}`
 
-قواعد الوصول الحالية تسمح للمدير بالكتابة وللمستخدم بقراءة البرامج المنشورة. شاشة البرامج والتسجيل في التحديات لم تُنفّذ بعد؛ يجب اعتماد مخطط تفصيلي للتسجيل والمهام قبل إضافة حقول أو مستندات لها.
+تقرأ الشاشة الحقول التالية: `title` و`summary` و`description` و`durationDays` و`price` و`currency` و`isFree` و`sortOrder` و`status`. تكون الدورة/البرنامج مجانياً فقط عندما `isFree: true` و`price: 0` مع حالة `published`.
+
+### أيام البرنامج
+
+المسار: `programs/{programId}/days/{dayId}`
+
+الحقول: `dayNumber` و`title` و`description` و`body` و`sortOrder`. لا تُقرأ المهام إلا بعد وجود تسجيل نشط.
+
+### تسجيل المستخدم وتقدمه
+
+المسار: `users/{uid}/programEnrollments/{programId}`
+
+الحقول: `userId` و`programId` و`status` و`completedDayIds` و`progressPercent` و`createdAt` و`updatedAt`. يسمح التسجيل الذاتي للبرامج المجانية فقط. المستخدم يحدّث الإنجاز والتقدم فقط؛ ولا يستطيع إنشاء تسجيل في برنامج مدفوع أو تغيير حالته.
 
 ## 8. قواعد الأمان
 
