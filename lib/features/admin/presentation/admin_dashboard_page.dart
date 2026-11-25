@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
-import 'admin_users_page.dart';
 import '../data/admin_repository.dart';
+import 'admin_users_page.dart';
 
 enum _AdminFieldKind {
   text,
@@ -285,7 +285,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
 class _AdminRecordsPage extends StatefulWidget {
   const _AdminRecordsPage({
-    super.key,
     required this.spec,
     this.collectionPath,
     this.title,

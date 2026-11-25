@@ -66,7 +66,7 @@ class _ContentLibraryPageState extends State<ContentLibraryPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return _LibraryMessage(
+                  return const _LibraryMessage(
                     title: 'تعذر تحميل مكتبتك',
                     message:
                         'تحقق من إعداد Firestore وقواعد الوصول ثم أعد المحاولة.',

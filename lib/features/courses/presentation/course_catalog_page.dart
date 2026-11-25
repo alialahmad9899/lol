@@ -153,9 +153,9 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    const Text(
                       'كورس مجاني',
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.white),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -186,10 +186,8 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                   Chip(label: Text(course.level)),
                   if (course.durationMinutes != null)
                     Chip(label: Text('${course.durationMinutes} دقيقة')),
-                  Chip(
-                    label: Text(
-                      'مجاني',
-                    ),
+                  const Chip(
+                    label: Text('مجاني'),
                   ),
                 ],
               ),

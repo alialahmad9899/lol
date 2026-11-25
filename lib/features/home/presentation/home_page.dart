@@ -8,8 +8,8 @@ import '../../admin/presentation/admin_dashboard_page.dart';
 import '../../content/presentation/content_library_page.dart';
 import '../../content/presentation/explore_page.dart';
 import '../../courses/presentation/course_catalog_page.dart';
-import '../../programs/presentation/program_catalog_page.dart';
 import '../../profile/presentation/profile_page.dart';
+import '../../programs/presentation/program_catalog_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({

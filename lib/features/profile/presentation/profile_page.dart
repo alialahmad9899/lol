@@ -509,22 +509,33 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
     'إحداث تغيير شخصي',
   ];
 
-  late final TextEditingController _nameController =
-      TextEditingController(text: widget.initialName);
-  late final TextEditingController _ageController =
-      TextEditingController(text: widget.initialAge?.toString() ?? '');
-  late final TextEditingController _cityController =
-      TextEditingController(text: widget.initialCity);
-  late final TextEditingController _countryController =
-      TextEditingController(text: widget.initialCountry);
-  late final Set<String> _selectedInterests =
-      widget.initialInterests.toSet();
-  String? _selectedGoal =
-      widget.initialGoal.isEmpty ? null : widget.initialGoal;
-  String? _selectedGender = widget.initialGender;
-  String? _preferredContentStyle = widget.initialContentStyle;
-  int? _dailyTimeMinutes = widget.initialDailyMinutes;
-  String? _preferredTime = widget.initialPreferredTime;
+  late final TextEditingController _nameController;
+  late final TextEditingController _ageController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _countryController;
+  late final Set<String> _selectedInterests;
+  String? _selectedGoal;
+  String? _selectedGender;
+  String? _preferredContentStyle;
+  int? _dailyTimeMinutes;
+  String? _preferredTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _ageController =
+        TextEditingController(text: widget.initialAge?.toString() ?? '');
+    _cityController = TextEditingController(text: widget.initialCity);
+    _countryController = TextEditingController(text: widget.initialCountry);
+    _selectedInterests = widget.initialInterests.toSet();
+    _selectedGoal =
+        widget.initialGoal.isEmpty ? null : widget.initialGoal;
+    _selectedGender = widget.initialGender;
+    _preferredContentStyle = widget.initialContentStyle;
+    _dailyTimeMinutes = widget.initialDailyMinutes;
+    _preferredTime = widget.initialPreferredTime;
+  }
 
   @override
   void dispose() {
