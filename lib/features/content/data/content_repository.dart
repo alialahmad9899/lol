@@ -16,9 +16,12 @@ class ContentCategory {
   factory ContentCategory.fromSnapshot(
     QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
   ) {
-    final Map<String, dynamic> data = snapshot.data();
+    return ContentCategory.fromMap(snapshot.id, snapshot.data());
+  }
+
+  factory ContentCategory.fromMap(String id, Map<String, dynamic> data) {
     return ContentCategory(
-      id: snapshot.id,
+      id: id,
       title: _readString(data['title'], fallback: 'قسم جديد'),
       description: _readString(data['description']),
       sortOrder: _readInt(data['sortOrder']),
@@ -52,9 +55,12 @@ class ContentItem {
   factory ContentItem.fromSnapshot(
     QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
   ) {
-    final Map<String, dynamic> data = snapshot.data();
+    return ContentItem.fromMap(snapshot.id, snapshot.data());
+  }
+
+  factory ContentItem.fromMap(String id, Map<String, dynamic> data) {
     return ContentItem(
-      id: snapshot.id,
+      id: id,
       title: _readString(data['title'], fallback: 'محتوى بدون عنوان'),
       summary: _readString(data['summary'] ?? data['description']),
       body: _readString(data['body'] ?? data['content']),
