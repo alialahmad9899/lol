@@ -103,9 +103,102 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    function isCoursePublished(courseId) {
+      return exists(/databases/$(database)/documents/courses/$(courseId))
+        && get(/databases/$(database)/documents/courses/$(courseId)).data.status == 'published';
+    }
+
+    function isFreeCourse(courseId) {
+      return isCoursePublished(courseId)
+        && get(/databases/$(database)/documents/courses/$(courseId)).data.isFree == true
+        && get(/databases/$(database)/documents/courses/$(courseId)).data.price == 0;
+    }
+
+    function hasActiveCourseEnrollment(userId, courseId) {
+      return exists(
+          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
+        )
+        && get(
+          /databases/$(database)/documents/users/$(userId)/enrollments/$(courseId)
+        ).data.status == 'active';
+    }
+
     match /courses/{courseId} {
-      allow read: if isAdmin() || resource.data.status == 'published';
-      allow write: if isAdmin();
+      // Published course metadata can be viewed; lesson content is protected below.
+      allow get, list: if isAdmin() || resource.data.status == 'published';
+      allow create, update, delete: if isAdmin();
+
+      match /lessons/{lessonId} {
+        allow get, list: if isAdmin()
+          || (
+            isSignedIn()
+            && isCoursePublished(courseId)
+            && (
+              isFreeCourse(courseId)
+              || hasActiveCourseEnrollment(request.auth.uid, courseId)
+            )
+          );
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    match /users/{userId}/enrollments/{courseId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+
+      allow create: if isAdmin()
+        || (
+          isOwner(userId)
+          && isFreeCourse(courseId)
+          && request.resource.data.keys().hasOnly([
+            'userId',
+            'courseId',
+            'status',
+            'completedLessonIds',
+            'progressPercent',
+            'createdAt',
+            'updatedAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'userId',
+            'courseId',
+            'status',
+            'completedLessonIds',
+            'progressPercent',
+            'createdAt',
+            'updatedAt'
+          ])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.courseId == courseId
+          && request.resource.data.status == 'active'
+          && request.resource.data.completedLessonIds is list
+          && request.resource.data.completedLessonIds.size() == 0
+          && request.resource.data.progressPercent == 0
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+        );
+
+      allow update: if isAdmin()
+        || (
+          isOwner(userId)
+          && resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'completedLessonIds',
+            'progressPercent',
+            'updatedAt'
+          ])
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.courseId == resource.data.courseId
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.completedLessonIds is list
+          && request.resource.data.completedLessonIds.size() <= 500
+          && request.resource.data.progressPercent is int
+          && request.resource.data.progressPercent >= 0
+          && request.resource.data.progressPercent <= 100
+          && request.resource.data.updatedAt == request.time
+        );
+
+      allow delete: if isAdmin();
     }
   }
 }
