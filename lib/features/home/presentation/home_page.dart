@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../content/presentation/explore_page.dart';
 import '../../courses/presentation/course_catalog_page.dart';
+import '../../programs/presentation/program_catalog_page.dart';
 import '../../profile/presentation/profile_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -45,6 +46,20 @@ class HomePage extends StatelessWidget {
       MaterialPageRoute<void>(
         builder: (BuildContext context) =>
             CourseCatalogPage(userId: currentUser.uid),
+      ),
+    );
+  }
+
+  void _openPrograms(BuildContext context) {
+    final User? currentUser = user;
+    if (currentUser == null) {
+      _showMessage(context, 'سجّل الدخول أولاً لعرض البرامج.');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) =>
+            ProgramCatalogPage(userId: currentUser.uid),
       ),
     );
   }
@@ -222,6 +237,14 @@ class HomePage extends StatelessWidget {
                 description:
                     'تصفح الدورات المجانية والمدفوعة وتابع تقدمك في الدروس.',
                 onTap: () => _openCourses(context),
+              ),
+              const SizedBox(height: 12),
+              _ComingSoonCard(
+                icon: Icons.flag_outlined,
+                title: 'برامج وتحديات رُوح',
+                description:
+                    'ابدأ تحدياتك اليومية وسجّل إنجازك وتقدمك خطوة بخطوة.',
+                onTap: () => _openPrograms(context),
               ),
               const SizedBox(height: 14),
               const _ComingSoonCard(
