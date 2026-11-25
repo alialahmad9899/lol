@@ -6,6 +6,7 @@ import '../../admin/data/admin_repository.dart';
 import '../../home/presentation/home_page.dart';
 import '../data/firebase_auth_repository.dart';
 import 'auth_page.dart';
+import 'email_verification_page.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -60,6 +61,13 @@ class _AuthGateState extends State<AuthGate> {
         final User? user = snapshot.data;
         if (user == null) {
           return AuthPage(repository: repository);
+        }
+
+        if (!user.emailVerified) {
+          return EmailVerificationPage(
+            user: user,
+            repository: repository,
+          );
         }
 
         final AdminRepository? adminRepository = _adminRepository;
