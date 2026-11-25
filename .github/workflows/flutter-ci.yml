@@ -23,6 +23,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node.js for Firestore rules tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Firestore rules test dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Test Firestore Security Rules
+        run: npm run test:rules
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
