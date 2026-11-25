@@ -1,90 +1,104 @@
 # إعداد Firebase Spark لتطبيق رُوح
 
-## الحالة الحالية
+## المشروع المعتمد والحالة الحالية
 
-مشروع Firebase أُنشئ على حساب المالك، والتفاصيل المؤكدة من لوحة التحكم هي:
+المشروع موجود بالفعل على Firebase Console:
+
 - Project name: `ali9899`
 - Project ID: `ali9899-59774`
 - Project number: `289917698507`
-- Billing plan الظاهر: Spark (مجاني).
+- الخطة الظاهرة في لوحة التحكم: **Spark — مجانية**.
 
-**حالة تسجيل التطبيقات والربط البرمجي:**
-- Android مسجّل في Firebase باسم الحزمة `com.rooh.rooh_app`.
-- ملف إعداد Android موجود في `android/app/google-services.json`، ويطابق Project ID ورقم المشروع أعلاه.
-- Google Services Gradle Plugin مضاف إلى إعدادات Android.
-- `lib/firebase_options.dart` يحتوي إعداد Android المستخرج من ملف التطبيق المسجّل.
-- معرّف iOS الموجود في مشروع Flutter هو `com.rooh.roohApp`، لكن تطبيق iOS لم يُسجّل في Firebase بعد.
-- ملف إعداد iOS غير موجود بعد.
+لا تنشئ مشروعاً جديداً ولا تضف بطاقة ولا تربط Billing أو Blaze.
 
-طبقة Flutter تشمل Firebase initialization وAuthentication repository وFirestore profile repository وقواعد أمان أولية. **لم يتم التحقق بعد من تفعيل Email/Password في Firebase Authentication أو إنشاء قاعدة Firestore الفعلية أو نشر القواعد**؛ لذلك لا نعتبر تدفق الحسابات والبيانات الحقيقية جاهزاً حتى تتم هذه الخطوات واختبارها ضد المشروع السحابي.
+### إعداد Android
 
-لا تنشئ تطبيق Android إضافياً أو تغيّر معرّف الحزمة دون تحديث ملفات المنصة في المستودع أيضاً.
+- تطبيق Android مسجّل بمعرّف الحزمة `com.rooh.rooh_app`.
+- ملف `android/app/google-services.json` موجود في فرع التطوير ويطابق رقم المشروع ومعرّفه.
+- Google Services Gradle Plugin مضاف في إعدادات Android.
+- `lib/firebase_options.dart` يحتوي إعداد تطبيق Android المسجل.
+- بناء Android التجريبي نجح في تشغيل CI سابق، لكن ذلك لا يثبت أن Auth وFirestore يعملان على السحابة.
 
-## 1. إنشاء مشروع مجاني
+### ما لم يتم التحقق منه بعد
 
-1. افتح [Firebase Console](https://console.firebase.google.com/).
-2. أنشئ مشروعاً جديداً باسم رُوح.
-3. أبقِ الخطة **Spark**. لا تضف بطاقة ولا تربط Billing.
-4. لا تنشئ Storage ولا تفعّل Cloud Functions.
+- تفعيل Email/Password في Firebase Authentication.
+- إنشاء Firestore Database فعلياً واختيار موقعها.
+- نشر `firestore.rules` واختبار قواعدها.
+- إنشاء حساب المدير الأول ومستنده في `admins`.
+- تسجيل تطبيق iOS وإضافة ملف إعداداته.
+- اختبار إنشاء الحساب والملف الشخصي والتسجيل في الكورس على Firebase الحقيقي.
 
-## 2. تفعيل تسجيل الدخول
+طبقة Flutter البرمجية موجودة، لكننا لا نعتبر تدفق الحسابات والكورسات جاهزاً للإطلاق قبل إكمال هذه الخطوات واختبارها.
 
-من Firebase Console افتح **Authentication → Sign-in method** وفعّل **Email/Password** فقط. لا نستخدم SMS في النسخة التجريبية.
+## 1. تفعيل تسجيل الدخول
 
-## 3. إنشاء Firestore
+من Firebase Console افتح المشروع `ali9899-59774` ثم:
+
+1. افتح **Authentication → Sign-in method**.
+2. فعّل **Email/Password** فقط.
+3. لا تفعّل Phone/SMS أو مزوداً يتطلب خدمة مدفوعة.
+
+## 2. إنشاء قاعدة Firestore
 
 1. افتح **Firestore Database** ثم **Create database**.
 2. اختر **Production mode** وليس Test Mode.
-3. اختر موقع قاعدة البيانات بعناية بناءً على موقع أغلب المستخدمين؛ اختيار الموقع قرار طويل الأمد.
-4. اترك بقية المنتجات التي تتطلب خطة مدفوعة غير مفعّلة.
+3. اختر موقع قاعدة البيانات بعناية؛ هذا الاختيار طويل الأمد ولا يغيّر بسهولة.
+4. لا تنشئ Storage ولا تفعّل Cloud Functions.
 
-## 4. ربط Flutter بالمشروع
+## 3. تهيئة Firebase CLI ونشر القواعد
 
-ثبّت الأدوات على جهاز التطوير:
+ثبّت Firebase CLI وسجّل الدخول بالحساب الذي يملك المشروع:
 
 ```bash
 npm install -g firebase-tools
 firebase login
+firebase projects:list
+```
+
+من مجلد المشروع، وعلى فرع `feature/rooh-flutter-foundation`، تأكد أن `.firebaserc` يشير إلى `ali9899-59774` ثم نفّذ:
+
+```bash
+firebase deploy --project ali9899-59774 --only firestore:rules
+```
+
+القواعد الموجودة في `firestore.rules` تمنع المستخدم من تعديل بريده أو UID أو صلاحياته. كما تحمي دروس الكورسات بحيث لا يستطيع المستخدم قراءة الدروس دون تسجيل نشط، ولا يستطيع منح نفسه تسجيلاً في دورة مدفوعة.
+
+بعد النشر يجب اختبار التسجيل والقراءة والتعديل باستخدام حساب مستخدم عادي وحساب مدير. لا تعتبر وجود ملف القواعد في GitHub دليلاً على نشره في Firebase.
+
+## 4. إعداد iOS لاحقاً
+
+معرّف iOS في مشروع Flutter هو `com.rooh.roohApp`، لكنه لم يُسجّل بعد في Firebase.
+
+بعد تسجيل تطبيق iOS بهذا المعرّف في Firebase Console، يمكن تشغيل FlutterFire CLI من مجلد المشروع لتوليد إعدادات Android وiOS معاً:
+
+```bash
 dart pub global activate flutterfire_cli
+flutterfire configure --project=ali9899-59774 --platforms=android,ios
 ```
 
-من مجلد المشروع نفّذ:
+تحقق بعد ذلك من بقاء إعداد Android وإضافة إعداد iOS إلى `lib/firebase_options.dart`. لا تشغّل هذا الأمر قبل تسجيل تطبيق iOS فعلياً.
 
-```bash
-flutterfire configure --project=<YOUR_FIREBASE_PROJECT_ID> --platforms=android,ios
-```
+## 5. إعداد المدير الأول
 
-اختر تطبيقات Android وiOS الصحيحة بحسب Bundle ID الظاهر في إعدادات المنصات. سيولّد FlutterFire CLI الملف `lib/firebase_options.dart` بإعدادات مشروعك، ويستبدل الملف المؤقت الموجود حالياً.
-
-ثم نفّذ:
-
-```bash
-flutter pub get
-flutter run
-```
-
-ملف إعدادات Firebase يحتوي معرّفات تطبيق عامة لازمة للاتصال، وليس مفتاح خدمة إدارية. لا تضع Service Account JSON أو مفاتيح Admin SDK في تطبيق Flutter أو GitHub.
-
-## 5. نشر قواعد الأمان
-
-بعد إنشاء قاعدة Firestore وتسجيل الدخول عبر Firebase CLI:
-
-```bash
-firebase deploy --project <YOUR_FIREBASE_PROJECT_ID> --only firestore:rules
-```
-
-توجد القواعد في `firestore.rules`. وهي تمنع المستخدم من قراءة ملف مستخدم آخر أو تعديله، وتحصر تعديل الملف الشخصي بالاسم واللغة والاهتمامات. لا تسمح للمستخدم بإضافة دور إداري أو تعديل البريد أو UID. المجموعات غير المذكورة مرفوضة افتراضياً.
-
-## 6. إعداد المدير الأول
-
-1. أنشئ حساب المدير من Firebase Authentication بعد ربط التطبيق.
+1. أنشئ حساب المدير من Firebase Authentication بعد تفعيل Email/Password.
 2. انسخ UID الخاص بالحساب من صفحة Authentication.
 3. من Firestore Console أنشئ مستنداً في مجموعة `admins` واجعل معرّف المستند هو UID نفسه.
-4. لا تنشئ مستند المدير من تطبيق Flutter؛ قواعد الأمان تمنع ذلك عمداً.
+4. لا تنشئ مستند المدير من تطبيق Flutter؛ القواعد تمنع ذلك عمداً.
 
 يُتحقق من صلاحية المدير بوجود مستند مطابق في المجموعة المحمية. لا تخزّن الدور في ملف المستخدم الذي يملكه المستخدم.
 
-## 7. الاختبار
+## 6. شكل البيانات
+
+راجع `docs/FIRESTORE_SCHEMA.md` قبل إضافة أي مستندات يدوياً. من المهم أن تتطابق الحقول وقيم الحالة مع ما تقرؤه واجهات التطبيق وقواعد الأمان، خصوصاً حقول الكورس:
+
+- `status: "published"`
+- `isFree: true` مع `price: 0` للدورة المجانية.
+- `isFree: false` وسعر أكبر من صفر للدورة المدفوعة.
+- الدروس تحت `courses/{courseId}/lessons/{lessonId}`.
+
+## 7. الاختبارات
+
+بعد إعداد الخدمات ونشر القواعد:
 
 ```bash
 flutter pub get
@@ -94,19 +108,21 @@ flutter test
 flutter build apk --debug
 ```
 
-يمكن تشغيل المحاكيات محلياً بعد تثبيت Firebase CLI:
+يمكن استخدام المحاكيات محلياً بعد تثبيت Firebase CLI:
 
 ```bash
 firebase emulators:start --only auth,firestore
 ```
 
-## حدود النسخة التجريبية
+## حدود النسخة المجانية
 
 - Firebase Spark فقط؛ لا بطاقة ولا Billing ولا ترقية تلقائية إلى Blaze.
 - Auth بالبريد وكلمة المرور؛ لا SMS.
-- Firestore للبيانات النصية والملفات الشخصية والبيانات الوصفية.
-- Firebase Storage وCloud Functions خارج النطاق.
+- Firestore للبيانات النصية والبيانات المنظمة.
+- Firebase Storage وCloud Functions خارج النطاق الحالي.
 - الفيديو وYouTube والبث المباشر ورفع الملفات مؤجلة.
-- Cloud Messaging سيضاف في مرحلة الإشعارات بعد اختبار الحسابات وقواعد البيانات.
+- Cloud Messaging سيضاف بعد إتمام إعداد Auth وFirestore واختبارهما.
+
+لا تضع Service Account JSON أو مفاتيح Admin SDK في Flutter أو GitHub.
 
 راجع [خطة Firebase الرسمية](https://firebase.google.com/docs/projects/billing/firebase-pricing-plans) و[دليل Firebase Security Rules](https://firebase.google.com/docs/firestore/security/get-started) قبل أي توسعة.
