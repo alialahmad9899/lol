@@ -16,16 +16,19 @@ class AdminPaymentRequestsPage extends StatefulWidget {
 class _AdminPaymentRequestsPageState extends State<AdminPaymentRequestsPage> {
   late final PaymentRequestRepository _repository =
       PaymentRequestRepository();
+  final Set<String> _reviewingIds = <String>{};
 
   Future<void> _review(
     PaymentRequest request, {
     required bool approve,
   }) async {
-    final String? note = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        final TextEditingController controller = TextEditingController();
-        return AlertDialog(
+    final TextEditingController noteController = TextEditingController();
+    String? note;
+    try {
+      note = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
           title: Text(approve ? 'اعتماد طلب الدفع' : 'رفض طلب الدفع'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -40,7 +43,7 @@ class _AdminPaymentRequestsPageState extends State<AdminPaymentRequestsPage> {
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: controller,
+                controller: noteController,
                 minLines: approve ? 1 : 2,
                 maxLines: 4,
                 maxLength: 500,
@@ -57,7 +60,7 @@ class _AdminPaymentRequestsPageState extends State<AdminPaymentRequestsPage> {
             ),
             FilledButton(
               onPressed: () {
-                final String value = controller.text.trim();
+                final String value = noteController.text.trim();
                 if (!approve && value.isEmpty) return;
                 Navigator.of(dialogContext).pop(value);
               },
@@ -65,10 +68,14 @@ class _AdminPaymentRequestsPageState extends State<AdminPaymentRequestsPage> {
             ),
           ],
         );
-      },
-    );
-    if (note == null) return;
+        },
+      );
+    } finally {
+      noteController.dispose();
+    }
+    if (note == null || _reviewingIds.contains(request.id)) return;
 
+    setState(() => _reviewingIds.add(request.id));
     try {
       await _repository.reviewRequest(
         requestId: request.id,
@@ -105,6 +112,8 @@ class _AdminPaymentRequestsPageState extends State<AdminPaymentRequestsPage> {
           backgroundColor: Color(0xFF9B382B),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _reviewingIds.remove(request.id));
     }
   }
 
@@ -147,6 +156,7 @@ class _AdminPaymentRequestsPageState extends State<AdminPaymentRequestsPage> {
                 request: request,
                 onApprove: () => _review(request, approve: true),
                 onReject: () => _review(request, approve: false),
+                isBusy: _reviewingIds.contains(request.id),
               );
             },
           );
@@ -161,11 +171,13 @@ class _PaymentRequestCard extends StatelessWidget {
     required this.request,
     required this.onApprove,
     required this.onReject,
+    required this.isBusy,
   });
 
   final PaymentRequest request;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+  final bool isBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -231,15 +243,21 @@ class _PaymentRequestCard extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: onApprove,
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('اعتماد'),
+                  onPressed: isBusy ? null : onApprove,
+                  icon: isBusy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_rounded),
+                  label: Text(isBusy ? 'جارٍ الحفظ...' : 'اعتماد'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: onReject,
+                  onPressed: isBusy ? null : onReject,
                   icon: const Icon(Icons.close_rounded),
                   label: const Text('رفض'),
                 ),
