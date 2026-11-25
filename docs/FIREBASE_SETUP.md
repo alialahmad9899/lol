@@ -2,20 +2,23 @@
 
 ## الحالة الحالية
 
-مشروع Firebase أُنشئ يدوياً على حساب المالك، والتفاصيل المؤكدة هي:
+مشروع Firebase أُنشئ على حساب المالك، والتفاصيل المؤكدة من لوحة التحكم هي:
 - Project name: `ali9899`
 - Project ID: `ali9899-59774`
 - Project number: `289917698507`
-- Billing plan الظاهر في لوحة التحكم: Spark (مجاني)
-- حالة المنصات عند آخر مراجعة: لا توجد تطبيقات Android أو iOS مسجلة بعد.
+- Billing plan الظاهر: Spark (مجاني).
 
-بدأنا إضافة طبقة Firebase داخل Flutter: تهيئة Firebase، تسجيل الدخول بالبريد وكلمة المرور، ملف المستخدم في Firestore، وقواعد أمان أولية. لا يزال ملف `lib/firebase_options.dart` مؤقتاً، ولم يتم ربط تطبيقات Android/iOS بعد؛ لذلك لا تعمل المصادقة أو عمليات البيانات الحقيقية قبل إكمال التسجيل والتهيئة.
+**حالة تسجيل التطبيقات والربط البرمجي:**
+- Android مسجّل في Firebase باسم الحزمة `com.rooh.rooh_app`.
+- ملف إعداد Android موجود في `android/app/google-services.json`، ويطابق Project ID ورقم المشروع أعلاه.
+- Google Services Gradle Plugin مضاف إلى إعدادات Android.
+- `lib/firebase_options.dart` يحتوي إعداد Android المستخرج من ملف التطبيق المسجّل.
+- معرّف iOS الموجود في مشروع Flutter هو `com.rooh.roohApp`، لكن تطبيق iOS لم يُسجّل في Firebase بعد.
+- ملف إعداد iOS غير موجود بعد.
 
-معرّفات التطبيقات التي يجب استخدامها عند تسجيل المنصات:
-- Android applicationId: `com.rooh.rooh_app`
-- iOS bundle identifier: `com.rooh.roohApp`
+طبقة Flutter تشمل Firebase initialization وAuthentication repository وFirestore profile repository وقواعد أمان أولية. **لم يتم التحقق بعد من تفعيل Email/Password في Firebase Authentication أو إنشاء قاعدة Firestore الفعلية أو نشر القواعد**؛ لذلك لا نعتبر تدفق الحسابات والبيانات الحقيقية جاهزاً حتى تتم هذه الخطوات واختبارها ضد المشروع السحابي.
 
-لا تنشئ تطبيقاً ثالثاً أو تستخدم معرّفاً مختلفاً دون تحديث ملفات المنصة في المستودع أيضاً.
+لا تنشئ تطبيق Android إضافياً أو تغيّر معرّف الحزمة دون تحديث ملفات المنصة في المستودع أيضاً.
 
 ## 1. إنشاء مشروع مجاني
 
