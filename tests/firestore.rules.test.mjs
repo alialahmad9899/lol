@@ -39,7 +39,7 @@ after(async () => {
   await testEnvironment.cleanup();
 });
 
-function signedIn(uid, email = \`\${uid}@example.com\`) {
+function signedIn(uid, email = uid + '@example.com') {
   return testEnvironment.authenticatedContext(uid, { email }).firestore();
 }
 
@@ -49,7 +49,7 @@ async function seed(path, data) {
   });
 }
 
-function profileData(uid, email = \`\${uid}@example.com\`) {
+function profileData(uid, email = uid + '@example.com') {
   return {
     uid,
     email,
