@@ -198,7 +198,8 @@ class _AuthPageState extends State<AuthPage> {
                           labelText: 'الاسم',
                           prefixIcon: Icon(Icons.person_outline_rounded),
                         ),
-                        validator: AuthInputValidator.validateDisplayName,
+                        validator: (String? value) =>
+                            AuthInputValidator.validateDisplayName(value ?? ''),
                       ),
                       const SizedBox(height: 14),
                     ],
@@ -212,7 +213,8 @@ class _AuthPageState extends State<AuthPage> {
                         labelText: 'البريد الإلكتروني',
                         prefixIcon: Icon(Icons.alternate_email_rounded),
                       ),
-                      validator: AuthInputValidator.validateEmail,
+                      validator: (String? value) =>
+                          AuthInputValidator.validateEmail(value ?? ''),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -237,7 +239,8 @@ class _AuthPageState extends State<AuthPage> {
                           ),
                         ),
                       ),
-                      validator: AuthInputValidator.validatePassword,
+                      validator: (String? value) =>
+                          AuthInputValidator.validatePassword(value ?? ''),
                     ),
                     if (!_isCreatingAccount)
                       Align(
