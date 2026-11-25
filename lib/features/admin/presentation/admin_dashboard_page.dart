@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../payments/presentation/admin_payment_requests_page.dart';
+import 'admin_users_page.dart';
 import '../data/admin_repository.dart';
 
 enum _AdminFieldKind {
@@ -251,6 +252,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 ),
               ),
               const SizedBox(height: 18),
+              _AdminSectionCard(
+                spec: const _AdminSectionSpec(
+                  title: 'المستخدمون',
+                  description:
+                      'عرض الحسابات المسجلة وأهدافها واهتماماتها',
+                  collectionPath: 'users',
+                  fields: <_AdminFieldSpec>[],
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminUsersPage(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               _AdminSectionCard(
                 spec: const _AdminSectionSpec(
                   title: 'طلبات الدفع اليدوي',
