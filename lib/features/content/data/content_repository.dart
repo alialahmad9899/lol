@@ -129,7 +129,7 @@ class ContentRepository {
     required String userId,
     required String contentId,
   }) {
-    return _userCollection('savedContent', userId)
+    return _userCollection(userId, 'savedContent')
         .doc(contentId)
         .snapshots()
         .map((DocumentSnapshot<Map<String, dynamic>> snapshot) => snapshot.exists);
@@ -139,7 +139,7 @@ class ContentRepository {
     required String userId,
     required String contentId,
   }) {
-    return _userCollection('contentProgress', userId)
+    return _userCollection(userId, 'contentProgress')
         .doc(contentId)
         .snapshots()
         .map((DocumentSnapshot<Map<String, dynamic>> snapshot) =>
@@ -147,7 +147,7 @@ class ContentRepository {
   }
 
   Stream<List<String>> watchSavedContentIds(String userId) {
-    return _userCollection('savedContent', userId).snapshots().map(
+    return _userCollection(userId, 'savedContent').snapshots().map(
       (QuerySnapshot<Map<String, dynamic>> snapshot) {
         final docs = snapshot.docs.toList(growable: true);
         docs.sort((first, second) {
@@ -165,7 +165,7 @@ class ContentRepository {
   }
 
   Stream<List<String>> watchCompletedContentIds(String userId) {
-    return _userCollection('contentProgress', userId).snapshots().map(
+    return _userCollection(userId, 'contentProgress').snapshots().map(
       (QuerySnapshot<Map<String, dynamic>> snapshot) {
         final docs = snapshot.docs
             .where((doc) => doc.data()['completed'] == true)
@@ -199,7 +199,7 @@ class ContentRepository {
     required bool saved,
   }) async {
     final DocumentReference<Map<String, dynamic>> reference =
-        _userCollection('savedContent', userId).doc(item.id);
+        _userCollection(userId, 'savedContent').doc(item.id);
     if (!saved) {
       await reference.delete();
       return;
@@ -215,7 +215,7 @@ class ContentRepository {
     required String contentId,
   }) async {
     final DocumentReference<Map<String, dynamic>> reference =
-        _userCollection('contentProgress', userId).doc(contentId);
+        _userCollection(userId, 'contentProgress').doc(contentId);
     await reference.set(<String, Object>{
       'contentId': contentId,
       'completed': true,
