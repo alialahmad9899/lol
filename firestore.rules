@@ -125,6 +125,10 @@ service cloud.firestore {
         || (isSignedIn() && resource.data.userId == request.auth.uid);
 
       allow create: if isOwner(request.resource.data.userId)
+        && !hasActiveCourseEnrollment(
+          request.resource.data.userId,
+          request.resource.data.courseId
+        )
         && request.resource.data.keys().hasOnly([
           'userId',
           'courseId',
