@@ -301,7 +301,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       icon: Icons.schedule_outlined,
                       label: 'وقتك اليومي',
                       value: profile['dailyTimeMinutes'] is int
-                          ? 'undefined دقيقة'
+                          ? profile['dailyTimeMinutes'].toString() + ' دقيقة'
                           : 'لم تحدد بعد',
                     ),
                     const Divider(height: 22),

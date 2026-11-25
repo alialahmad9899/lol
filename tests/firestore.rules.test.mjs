@@ -44,7 +44,8 @@ function signedIn(uid, email = uid + '@example.com') {
 }
 
 async function seed(path, data) {
-  await testEnvironment.withSecurityRulesDisabled(async ({ firestore }) => {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
     await setDoc(doc(firestore, path), data);
   });
 }

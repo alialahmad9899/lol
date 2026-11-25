@@ -19,15 +19,17 @@
 - `lib/firebase_options.dart` يحتوي إعداد تطبيق Android المسجل.
 - بناء Android التجريبي نجح في تشغيل CI سابق، لكن ذلك لا يثبت أن Auth وFirestore يعملان على السحابة.
 
+### ما تم تأكيده في Firebase Console
+
+- المستخدم فعّل Email/Password في Firebase Authentication.
+- قاعدة Firestore موجودة باسم `(default)` وموقع `europe-west4`.
+- الخطة الحالية Spark المجانية.
+
 ### ما لم يتم التحقق منه بعد
 
-- تفعيل Email/Password في Firebase Authentication.
-- إنشاء Firestore Database فعلياً واختيار موقعها.
-- نشر `firestore.rules` واختبار قواعدها.
-- إنشاء حساب المدير الأول ومستنده في `admins`.
-- تسجيل تطبيق iOS وإضافة ملف إعداداته.
-- اختبار إنشاء الحساب والملف الشخصي والتسجيل في الكورس على Firebase الحقيقي.
-- شاشة التحقق من البريد موجودة في التطبيق، لكن يجب التأكد من إعداد قالب رسالة التحقق في Firebase Console.
+- نشر `firestore.rules` والفهارس `firestore.indexes.json` على المشروع الحقيقي.
+- إنشاء مستند المدير الأول في `admins` بعد استخراج UID الصحيح.
+- تجربة التسجيل وحفظ الملف الشخصي والمحتوى المجاني على Firebase الحقيقي.
 
 طبقة Flutter البرمجية موجودة، لكننا لا نعتبر تدفق الحسابات والكورسات جاهزاً للإطلاق قبل إكمال هذه الخطوات واختبارها.
 
@@ -39,12 +41,13 @@
 2. فعّل **Email/Password** فقط.
 3. لا تفعّل Phone/SMS أو مزوداً يتطلب خدمة مدفوعة.
 
-## 2. إنشاء قاعدة Firestore
+## 2. قاعدة Firestore الموجودة
 
-1. افتح **Firestore Database** ثم **Create database**.
-2. اختر **Production mode** وليس Test Mode.
-3. اختر موقع قاعدة البيانات بعناية؛ هذا الاختيار طويل الأمد ولا يغيّر بسهولة.
-4. لا تنشئ Storage ولا تفعّل Cloud Functions.
+قاعدة المشروع الافتراضية موجودة بالفعل:
+- Database ID: `(default)`
+- Location: `europe-west4`
+
+لا تحاول إنشاء قاعدة ثانية بالمعرّف نفسه ولا تنشئ قاعدة إضافية. لا تفعّل Storage أو Cloud Functions في هذه المرحلة.
 
 ## 3. تهيئة Firebase CLI ونشر القواعد
 
@@ -59,25 +62,12 @@ firebase projects:list
 من مجلد المشروع، وعلى فرع `feature/rooh-flutter-foundation`، تأكد أن `.firebaserc` يشير إلى `ali9899-59774` ثم نفّذ:
 
 ```bash
-firebase deploy --project ali9899-59774 --only firestore:rules
+firebase deploy --project ali9899-59774 --only firestore:rules,firestore:indexes
 ```
 
 القواعد الموجودة في `firestore.rules` تمنع المستخدم من تعديل بريده أو UID أو صلاحياته. كما تحمي دروس الكورسات بحيث لا يستطيع المستخدم قراءة الدروس دون تسجيل نشط، ولا يستطيع منح نفسه تسجيلاً في دورة مدفوعة.
 
 بعد النشر يجب اختبار التسجيل والقراءة والتعديل باستخدام حساب مستخدم عادي وحساب مدير. لا تعتبر وجود ملف القواعد في GitHub دليلاً على نشره في Firebase.
-
-## 4. إعداد iOS لاحقاً
-
-معرّف iOS في مشروع Flutter هو `com.rooh.roohApp`، لكنه لم يُسجّل بعد في Firebase.
-
-بعد تسجيل تطبيق iOS بهذا المعرّف في Firebase Console، يمكن تشغيل FlutterFire CLI من مجلد المشروع لتوليد إعدادات Android وiOS معاً:
-
-```bash
-dart pub global activate flutterfire_cli
-flutterfire configure --project=ali9899-59774 --platforms=android,ios
-```
-
-تحقق بعد ذلك من بقاء إعداد Android وإضافة إعداد iOS إلى `lib/firebase_options.dart`. لا تشغّل هذا الأمر قبل تسجيل تطبيق iOS فعلياً.
 
 ## 5. إعداد المدير الأول
 
@@ -93,8 +83,8 @@ flutterfire configure --project=ali9899-59774 --platforms=android,ios
 راجع `docs/FIRESTORE_SCHEMA.md` قبل إضافة أي مستندات يدوياً. من المهم أن تتطابق الحقول وقيم الحالة مع ما تقرؤه واجهات التطبيق وقواعد الأمان، خصوصاً حقول الكورس:
 
 - `status: "published"`
-- `isFree: true` مع `price: 0` للدورة المجانية.
-- `isFree: false` وسعر أكبر من صفر للدورة المدفوعة.
+- `isFree: true` مع `price: 0` للدورة أو البرنامج المجاني.
+- الإصدار الأول يعرض العناصر المجانية فقط؛ لا تنشر أي عنصر مدفوع للمستخدمين في المرحلة الحالية.
 - الدروس تحت `courses/{courseId}/lessons/{lessonId}`.
 
 ## 7. اختبار قواعد الأمان
