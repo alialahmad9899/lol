@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../admin/data/admin_repository.dart';
 import '../../home/presentation/home_page.dart';
 import '../data/firebase_auth_repository.dart';
 import 'auth_page.dart';
@@ -15,6 +16,7 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   FirebaseAuthRepository? _repository;
+  AdminRepository? _adminRepository;
   Stream<User?>? _authState;
   String? _initializationError;
 
@@ -23,6 +25,7 @@ class _AuthGateState extends State<AuthGate> {
     super.initState();
     try {
       _repository = FirebaseAuthRepository();
+      _adminRepository = AdminRepository();
       _authState = _repository!.authStateChanges;
     } catch (_) {
       _initializationError =
@@ -59,9 +62,20 @@ class _AuthGateState extends State<AuthGate> {
           return AuthPage(repository: repository);
         }
 
-        return HomePage(
-          user: user,
-          onSignOut: repository.signOut,
+        final AdminRepository? adminRepository = _adminRepository;
+        if (adminRepository == null) {
+          return HomePage(user: user, onSignOut: repository.signOut);
+        }
+
+        return StreamBuilder<bool>(
+          stream: adminRepository.watchAdminStatus(user.uid),
+          builder: (BuildContext context, AsyncSnapshot<bool> adminSnapshot) {
+            return HomePage(
+              user: user,
+              onSignOut: repository.signOut,
+              isAdmin: adminSnapshot.data ?? false,
+            );
+          },
         );
       },
     );
