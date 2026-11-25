@@ -15,7 +15,16 @@ class ContentLibraryPage extends StatefulWidget {
 
 class _ContentLibraryPageState extends State<ContentLibraryPage> {
   late final ContentRepository _repository = ContentRepository();
+  final Map<String, Future<ContentItem?>> _itemFutures =
+      <String, Future<ContentItem?>>{};
   bool _showCompleted = false;
+
+  Future<ContentItem?> _loadItem(String contentId) {
+    return _itemFutures.putIfAbsent(
+      contentId,
+      () => _repository.fetchPublishedItem(contentId),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +97,7 @@ class _ContentLibraryPageState extends State<ContentLibraryPage> {
                   itemBuilder: (context, index) {
                     final String contentId = ids[index];
                     return FutureBuilder<ContentItem?>(
-                      future: _repository.fetchPublishedItem(contentId),
+                      future: _loadItem(contentId),
                       builder: (context, itemSnapshot) {
                         if (itemSnapshot.connectionState ==
                             ConnectionState.waiting) {
