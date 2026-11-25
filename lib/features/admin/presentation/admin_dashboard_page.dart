@@ -257,7 +257,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     spec: section,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => AdminRecordsPage(spec: section),
+                        builder: (_) => _AdminRecordsPage(spec: section),
                       ),
                     ),
                   ),
@@ -277,8 +277,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 }
 
-class AdminRecordsPage extends StatefulWidget {
-  const AdminRecordsPage({
+class _AdminRecordsPage extends StatefulWidget {
+  const _AdminRecordsPage({
     super.key,
     required this.spec,
     this.collectionPath,
@@ -290,10 +290,10 @@ class AdminRecordsPage extends StatefulWidget {
   final String? title;
 
   @override
-  State<AdminRecordsPage> createState() => _AdminRecordsPageState();
+  State<_AdminRecordsPage> createState() => __AdminRecordsPageState();
 }
 
-class _AdminRecordsPageState extends State<AdminRecordsPage> {
+class __AdminRecordsPageState extends State<_AdminRecordsPage> {
   late final CollectionReference<Map<String, dynamic>> _collection =
       FirebaseFirestore.instance.collection(
     widget.collectionPath ?? widget.spec.collectionPath,
@@ -408,7 +408,7 @@ class _AdminRecordsPageState extends State<AdminRecordsPage> {
         document.id;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => AdminRecordsPage(
+        builder: (_) => _AdminRecordsPage(
           spec: childSpec,
           collectionPath: widget.spec.collectionPath +
               '/' +
@@ -649,11 +649,11 @@ class _AdminEditorDialogState extends State<_AdminEditorDialog> {
           break;
         case _AdminFieldKind.integer:
           final String value = _controllers[field.key]!.text.trim();
-          if (value.isNotEmpty) result[field.key] = int.parse(value);
+          result[field.key] = value.isEmpty ? null : int.parse(value);
           break;
         case _AdminFieldKind.decimal:
           final String value = _controllers[field.key]!.text.trim();
-          if (value.isNotEmpty) result[field.key] = num.parse(value);
+          result[field.key] = value.isEmpty ? null : num.parse(value);
           break;
         case _AdminFieldKind.stringList:
           result[field.key] = _controllers[field.key]!.text
@@ -665,7 +665,7 @@ class _AdminEditorDialogState extends State<_AdminEditorDialog> {
         case _AdminFieldKind.text:
         case _AdminFieldKind.multiline:
           final String value = _controllers[field.key]!.text.trim();
-          if (value.isNotEmpty || field.required) result[field.key] = value;
+          result[field.key] = value;
           break;
       }
     }
