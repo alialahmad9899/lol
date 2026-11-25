@@ -98,9 +98,98 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    function isProgramPublished(programId) {
+      return exists(/databases/$(database)/documents/programs/$(programId))
+        && get(/databases/$(database)/documents/programs/$(programId)).data.status == 'published';
+    }
+
+    function isFreeProgram(programId) {
+      return isProgramPublished(programId)
+        && get(/databases/$(database)/documents/programs/$(programId)).data.isFree == true
+        && get(/databases/$(database)/documents/programs/$(programId)).data.price == 0;
+    }
+
+    function hasActiveProgramEnrollment(userId, programId) {
+      return exists(
+          /databases/$(database)/documents/users/$(userId)/programEnrollments/$(programId)
+        )
+        && get(
+          /databases/$(database)/documents/users/$(userId)/programEnrollments/$(programId)
+        ).data.status == 'active';
+    }
+
     match /programs/{programId} {
-      allow read: if isAdmin() || resource.data.status == 'published';
-      allow write: if isAdmin();
+      allow get, list: if isAdmin() || resource.data.status == 'published';
+      allow create, update, delete: if isAdmin();
+
+      match /days/{dayId} {
+        allow get, list: if isAdmin()
+          || (
+            isSignedIn()
+            && isProgramPublished(programId)
+            && hasActiveProgramEnrollment(request.auth.uid, programId)
+          );
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    match /users/{userId}/programEnrollments/{programId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+
+      allow create: if isAdmin()
+        || (
+          isOwner(userId)
+          && isFreeProgram(programId)
+          && request.resource.data.keys().hasOnly([
+            'userId',
+            'programId',
+            'status',
+            'completedDayIds',
+            'progressPercent',
+            'createdAt',
+            'updatedAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'userId',
+            'programId',
+            'status',
+            'completedDayIds',
+            'progressPercent',
+            'createdAt',
+            'updatedAt'
+          ])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.programId == programId
+          && request.resource.data.status == 'active'
+          && request.resource.data.completedDayIds is list
+          && request.resource.data.completedDayIds.size() == 0
+          && request.resource.data.progressPercent == 0
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+        );
+
+      allow update: if isAdmin()
+        || (
+          isOwner(userId)
+          && resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'completedDayIds',
+            'progressPercent',
+            'updatedAt'
+          ])
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.programId == resource.data.programId
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.completedDayIds is list
+          && request.resource.data.completedDayIds.size() <= 365
+          && request.resource.data.progressPercent is int
+          && request.resource.data.progressPercent >= 0
+          && request.resource.data.progressPercent <= 100
+          && request.resource.data.updatedAt == request.time
+        );
+
+      allow delete: if isAdmin();
     }
 
     function isCoursePublished(courseId) {
