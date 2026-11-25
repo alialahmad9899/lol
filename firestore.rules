@@ -23,6 +23,7 @@ service cloud.firestore {
           'displayName',
           'locale',
           'interests',
+          'primaryGoal',
           'createdAt',
           'updatedAt',
           'schemaVersion'
@@ -44,6 +45,8 @@ service cloud.firestore {
         && data.locale in ['ar', 'en']
         && data.interests is list
         && data.interests.size() <= 20
+        && (!('primaryGoal' in data.keys())
+          || (data.primaryGoal is string && data.primaryGoal.size() <= 120))
         && data.schemaVersion == 1;
     }
 
@@ -65,6 +68,7 @@ service cloud.firestore {
           'displayName',
           'locale',
           'interests',
+          'primaryGoal',
           'updatedAt'
         ])
         && request.resource.data.uid == resource.data.uid
@@ -76,6 +80,9 @@ service cloud.firestore {
         && request.resource.data.locale in ['ar', 'en']
         && request.resource.data.interests is list
         && request.resource.data.interests.size() <= 20
+        && (!('primaryGoal' in request.resource.data.keys())
+          || (request.resource.data.primaryGoal is string
+            && request.resource.data.primaryGoal.size() <= 120))
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if false;
