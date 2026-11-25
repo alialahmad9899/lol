@@ -4,16 +4,23 @@ import 'package:material_ui/material_ui.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_logo.dart';
+import '../../admin/presentation/admin_dashboard_page.dart';
 import '../../content/presentation/explore_page.dart';
 import '../../courses/presentation/course_catalog_page.dart';
 import '../../programs/presentation/program_catalog_page.dart';
 import '../../profile/presentation/profile_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, this.user, this.onSignOut});
+  const HomePage({
+    super.key,
+    this.user,
+    this.onSignOut,
+    this.isAdmin = false,
+  });
 
   final User? user;
   final Future<void> Function()? onSignOut;
+  final bool isAdmin;
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
@@ -96,6 +103,21 @@ class HomePage extends StatelessWidget {
           ],
         ),
         actions: <Widget>[
+          if (isAdmin)
+            IconButton(
+              tooltip: 'لوحة الإدارة',
+              onPressed: () {
+                final User? currentUser = user;
+                if (currentUser == null) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (BuildContext context) =>
+                        AdminDashboardPage(userId: currentUser.uid),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+            ),
           IconButton(
             tooltip: 'استكشف المحتوى',
             onPressed: () => _openExplore(context),
