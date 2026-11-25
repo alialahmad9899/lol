@@ -5,7 +5,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_logo.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.onSignOut});
+
+  final Future<void> Function()? onSignOut;
 
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
@@ -51,12 +53,11 @@ class HomePage extends StatelessWidget {
         ),
         actions: <Widget>[
           IconButton(
-            tooltip: 'الملف الشخصي',
-            onPressed: () => _showMessage(
-              context,
-              'سيتم تفعيل الملف الشخصي في المرحلة القادمة.',
-            ),
-            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'تسجيل الخروج',
+            onPressed: onSignOut == null
+                ? () => _showMessage(context, 'خيار الحساب غير متاح حالياً.')
+                : () => onSignOut!(),
+            icon: const Icon(Icons.logout_rounded),
           ),
           const SizedBox(width: 8),
         ],
