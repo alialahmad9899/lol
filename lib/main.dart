@@ -12,5 +12,5 @@ Future<void> main() async {
     debugPrint('Firebase initialization failed: ${firebaseResult.error}');
   }
 
-  runApp(const RoohApp());
+  runApp(RoohApp(firebaseReady: firebaseResult.isConfigured));
 }
