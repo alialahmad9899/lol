@@ -27,7 +27,7 @@ class Course {
   final bool isFree;
   final int sortOrder;
 
-  bool get canEnrollForFree => isFree || price <= 0;
+  bool get canEnrollForFree => isFree && price <= 0;
 
   factory Course.fromSnapshot(
     QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
@@ -50,7 +50,7 @@ class Course {
           : null,
       price: price,
       currency: _stringValue(data['currency'], fallback: 'USD'),
-      isFree: data['isFree'] == true || price <= 0,
+      isFree: data['isFree'] == true,
       sortOrder: data['sortOrder'] is int ? data['sortOrder'] as int : 0,
     );
   }
@@ -175,7 +175,7 @@ class CourseRepository {
       final Map<String, dynamic> courseData = courseSnapshot.data()!;
       final Object? rawPrice = courseData['price'];
       final bool isFree =
-          courseData['isFree'] == true || (rawPrice is num && rawPrice <= 0);
+          courseData['isFree'] == true && rawPrice is num && rawPrice == 0;
       if (!isFree) {
         throw StateError('هذه الدورة مدفوعة وتحتاج إلى موافقة الإدارة.');
       }
