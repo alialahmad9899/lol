@@ -204,6 +204,10 @@ class ContentRepository {
       await reference.delete();
       return;
     }
+    final DocumentSnapshot<Map<String, dynamic>> existing =
+        await reference.get();
+    if (existing.exists) return;
+
     await reference.set(<String, Object>{
       'contentId': item.id,
       'createdAt': FieldValue.serverTimestamp(),
