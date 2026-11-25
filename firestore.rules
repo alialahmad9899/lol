@@ -120,6 +120,82 @@ service cloud.firestore {
         ).data.status == 'active';
     }
 
+    match /paymentRequests/{requestId} {
+      allow get, list: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow create: if isOwner(request.resource.data.userId)
+        && request.resource.data.keys().hasOnly([
+          'userId',
+          'courseId',
+          'courseTitle',
+          'amount',
+          'currency',
+          'transferReference',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'userId',
+          'courseId',
+          'courseTitle',
+          'amount',
+          'currency',
+          'transferReference',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && exists(/databases/$(database)/documents/courses/$(request.resource.data.courseId))
+        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.status == 'published'
+        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.isFree == false
+        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.price is number
+        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.price > 0
+        && request.resource.data.amount is number
+        && request.resource.data.amount == get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.price
+        && request.resource.data.currency == get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.currency
+        && request.resource.data.courseTitle == get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.title
+        && request.resource.data.transferReference is string
+        && request.resource.data.transferReference.size() >= 4
+        && request.resource.data.transferReference.size() <= 120
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'reviewNote',
+          'reviewedBy',
+          'reviewedAt',
+          'updatedAt'
+        ])
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.courseTitle == resource.data.courseTitle
+        && request.resource.data.amount == resource.data.amount
+        && request.resource.data.currency == resource.data.currency
+        && request.resource.data.transferReference == resource.data.transferReference
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.reviewNote is string
+        && request.resource.data.reviewNote.size() <= 500
+        && (
+          request.resource.data.status == 'rejected'
+          || (
+            existsAfter(/databases/$(database)/documents/users/$(resource.data.userId)/enrollments/$(resource.data.courseId))
+            && getAfter(/databases/$(database)/documents/users/$(resource.data.userId)/enrollments/$(resource.data.courseId)).data.status == 'active'
+          )
+        );
+
+      allow delete: if false;
+    }
+
     match /programs/{programId} {
       allow get, list: if isAdmin() || resource.data.status == 'published';
       allow create, update, delete: if isAdmin();
