@@ -65,6 +65,13 @@ class FirebaseAuthRepository {
     try {
       await _profiles.ensureProfile(user, displayName: displayName);
     } catch (error, stackTrace) {
+      // Do not leave a partially signed-in session when its profile could not
+      // be read or created. The user can retry after the data service is fixed.
+      try {
+        await _auth.signOut();
+      } catch (_) {
+        // Preserve the original profile synchronization failure.
+      }
       Error.throwWithStackTrace(
         AccountProfileSyncException(userId: user.uid, cause: error),
         stackTrace,
