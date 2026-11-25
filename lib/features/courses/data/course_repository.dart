@@ -27,7 +27,7 @@ class Course {
   final bool isFree;
   final int sortOrder;
 
-  bool get canEnrollForFree => isFree && price <= 0;
+  bool get canEnrollForFree => isFree;
 
   factory Course.fromSnapshot(
     QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
@@ -50,7 +50,7 @@ class Course {
           : null,
       price: price,
       currency: _stringValue(data['currency'], fallback: 'USD'),
-      isFree: data['isFree'] == true,
+      isFree: data['isFree'] == true && price <= 0,
       sortOrder: data['sortOrder'] is int ? data['sortOrder'] as int : 0,
     );
   }
