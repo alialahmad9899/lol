@@ -31,7 +31,7 @@ class InitialLibrarySeedRepository {
     InitialSeedDocument(
       path: 'categories/awareness',
       data: <String, Object>{
-        'title': 'وعي الذات',
+        'title': 'وعي',
         'description': 'مساحة لملاحظة أفكارك ومشاعرك واحتياجاتك بلطف',
         'sortOrder': 1,
       },
@@ -39,7 +39,7 @@ class InitialLibrarySeedRepository {
     InitialSeedDocument(
       path: 'categories/calm',
       data: <String, Object>{
-        'title': 'الهدوء والاسترخاء',
+        'title': 'استرخاء',
         'description': 'ممارسات قصيرة للتهدئة واستعادة الحضور',
         'sortOrder': 2,
       },
@@ -47,25 +47,33 @@ class InitialLibrarySeedRepository {
     InitialSeedDocument(
       path: 'categories/focus',
       data: <String, Object>{
-        'title': 'التركيز والحضور',
+        'title': 'تركيز',
         'description': 'خطوات عملية للانتباه وتقليل التشتت',
         'sortOrder': 3,
       },
     ),
     InitialSeedDocument(
-      path: 'categories/habits',
+      path: 'categories/development',
       data: <String, Object>{
-        'title': 'العادات الصغيرة',
-        'description': 'بدايات بسيطة قابلة للاستمرار',
+        'title': 'تطوير',
+        'description': 'خطوات صغيرة لبناء العادات والنمو الشخصي',
         'sortOrder': 4,
       },
     ),
     InitialSeedDocument(
-      path: 'categories/balance',
+      path: 'categories/daily',
       data: <String, Object>{
-        'title': 'التوازن اليومي',
+        'title': 'رُوح اليومية',
         'description': 'مساحات للتأمل والرفق بالنفس خلال اليوم',
         'sortOrder': 5,
+      },
+    ),
+    InitialSeedDocument(
+      path: 'categories/change',
+      data: <String, Object>{
+        'title': 'تغيير',
+        'description': 'مساحة للتوقف واختيار استجابة وخطوة جديدة',
+        'sortOrder': 6,
       },
     ),
     InitialSeedDocument(
@@ -186,7 +194,7 @@ class InitialLibrarySeedRepository {
         'title': 'أصغر خطوة ممكنة',
         'summary': 'حوّل هدفاً كبيراً إلى بداية لا تبدو مرهقة',
         'body': 'اختر عادة ترغب في بنائها، ثم صغّرها إلى نسخة تستغرق دقيقتين أو أقل. بدلاً من «سأقرأ كتاباً»، جرّب «سأقرأ فقرة». وبدلاً من «سأمارس الرياضة»، جرّب «سأرتدي الحذاء وأمشي قليلاً» إذا كان ذلك مناسباً لك.\n\nحدد متى وأين ستبدأ. اجعل النجاح هو الحضور للمحاولة، لا الوصول إلى نتيجة كبيرة من أول يوم. يمكنك زيادة الخطوة لاحقاً عندما تصبح البداية مألوفة.',
-        'categoryId': 'habits',
+        'categoryId': 'development',
         'type': 'exercise',
         'durationMinutes': 5,
         'tags': <String>['عادات', 'بداية صغيرة', 'استمرارية'],
@@ -200,7 +208,7 @@ class InitialLibrarySeedRepository {
         'title': 'اربط العادة بلحظة موجودة',
         'summary': 'استخدم حدثاً يومياً مألوفاً كتذكير لعادة جديدة',
         'body': 'اختر عادة صغيرة تريد تكرارها، ثم اربطها بشيء يحدث بالفعل. مثال: بعد إعداد الشاي، أكتب سطراً واحداً في دفتري. أو بعد إغلاق الحاسوب، أرتب المكتب لدقيقتين.\n\nاكتب الصيغة: «بعد أن أفعل ___، سأفعل ___ لمدة ___».\n\nاختر وقتاً واقعياً، وضع تذكيراً بسيطاً إن احتجت. إذا فاتتك مرة، لا تعاقب نفسك ولا تحاول تعويضها بمجهود مضاعف؛ عد إليها في الفرصة التالية.',
-        'categoryId': 'habits',
+        'categoryId': 'development',
         'type': 'exercise',
         'durationMinutes': 4,
         'tags': <String>['عادات', 'تذكير', 'روتين'],
@@ -214,7 +222,7 @@ class InitialLibrarySeedRepository {
         'title': 'مراجعة هادئة لنهاية اليوم',
         'summary': 'ثلاث ملاحظات تساعدك على إنهاء اليوم دون جلد الذات',
         'body': 'قبل النوم أو عند انتهاء يومك، خذ لحظة واكتب:\n\n1. شيء واحد سار بشكل مقبول اليوم.\n2. شيء كان صعباً وأحتاج أن أتعامل معه برفق.\n3. شيء واحد أريد أن أبدأ به غداً.\n\nلا تحوّل المراجعة إلى قائمة أخطاء. إن لم تجد إنجازاً كبيراً، يكفي أنك واصلت يومك أو انتبهت إلى احتياجك. يمكنك ترك السؤال الذي لا ترغب في الإجابة عنه.',
-        'categoryId': 'balance',
+        'categoryId': 'daily',
         'type': 'exercise',
         'durationMinutes': 5,
         'tags': <String>['تأمل يومي', 'توازن', 'كتابة'],
@@ -228,7 +236,7 @@ class InitialLibrarySeedRepository {
         'title': 'تحدث إلى نفسك بلطف',
         'summary': 'استبدل النقد القاسي بجملة واقعية ومساندة',
         'body': 'تخيل أن شخصاً تحبه مرّ بالموقف نفسه. ما الكلمات التي ستقولها له؟ جرّب أن تمنح نفسك جزءاً من هذا اللطف.\n\nبدلاً من «أنا فاشل»، قل: «لم تسر الأمور كما أردت، ويمكنني أن أتعلم خطوة واحدة». وبدلاً من «يجب أن أنجز كل شيء»، قل: «سأختار ما أستطيع فعله الآن».\n\nاللطف لا يعني تجاهل المسؤولية؛ إنه طريقة لمواجهة الواقع دون إهانة نفسك.',
-        'categoryId': 'balance',
+        'categoryId': 'daily',
         'type': 'text',
         'durationMinutes': 4,
         'tags': <String>['رفق بالنفس', 'توازن', 'حديث داخلي'],
@@ -242,7 +250,7 @@ class InitialLibrarySeedRepository {
         'title': 'مساحة بين الموقف ورد الفعل',
         'summary': 'وقفة قصيرة تساعدك على اختيار رد أكثر اتزاناً',
         'body': 'عندما يزعجك موقف، جرّب ألا ترد في اللحظة نفسها إن كان بإمكانك الانتظار بأمان. خذ نفساً طبيعياً، وحدد ما حدث كما لو أنك تصفه بكاميرا، دون تفسير نوايا الآخرين.\n\nاسأل نفسك: ما الذي أعرفه فعلاً؟ ما الذي أفترضه؟ ما النتيجة التي أريدها من ردي؟\n\nيمكنك قول: «أحتاج بضع دقائق لأفكر ثم نكمل الحديث». إذا كان الموقف يتضمن تهديداً أو إساءة، فالأولوية لسلامتك وطلب الدعم المناسب، لا لإطالة النقاش.',
-        'categoryId': 'balance',
+        'categoryId': 'change',
         'type': 'text',
         'durationMinutes': 5,
         'tags': <String>['علاقات', 'تواصل', 'توازن'],

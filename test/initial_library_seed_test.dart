@@ -28,8 +28,9 @@ void main() {
         'awareness',
         'calm',
         'focus',
-        'habits',
-        'balance',
+        'development',
+        'change',
+        'daily',
       ]));
       expect(contentItems.length, greaterThanOrEqualTo(10));
 
@@ -42,7 +43,7 @@ void main() {
     });
 
     test('seed course and program are free and published', () {
-      final documents = InitialLibrarySeedRepository.initialDocuments;
+      const documents = InitialLibrarySeedRepository.initialDocuments;
       final course = documents.firstWhere(
         (InitialSeedDocument item) =>
             item.path == 'courses/self_awareness_basics',
