@@ -21,6 +21,7 @@ class FirebaseAuthRepository {
     required String password,
     required String displayName,
     List<String> interests = const <String>[],
+    String primaryGoal = '',
   }) async {
     final UserCredential credential =
         await _auth.createUserWithEmailAndPassword(
@@ -31,6 +32,7 @@ class FirebaseAuthRepository {
       credential.user,
       displayName: displayName,
       interests: interests,
+      primaryGoal: primaryGoal,
     );
     return credential;
   }
@@ -65,6 +67,7 @@ class FirebaseAuthRepository {
     User? user, {
     String? displayName,
     List<String> interests = const <String>[],
+    String primaryGoal = '',
   }) async {
     if (user == null) return;
 
@@ -73,6 +76,7 @@ class FirebaseAuthRepository {
         user,
         displayName: displayName,
         interests: interests,
+        primaryGoal: primaryGoal,
       );
     } catch (error, stackTrace) {
       // Do not leave a partially signed-in session when its profile could not
