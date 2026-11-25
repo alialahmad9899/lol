@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/brand_logo.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -182,19 +183,7 @@ class _BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: RoohTheme.primary,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: const Icon(
-        Icons.self_improvement_rounded,
-        color: Colors.white,
-        size: 25,
-      ),
-    );
+    return const BrandLogo(size: 48);
   }
 }
 
